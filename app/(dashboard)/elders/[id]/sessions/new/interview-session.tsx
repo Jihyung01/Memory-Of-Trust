@@ -34,14 +34,14 @@ export default function InterviewSession({ elder, session }: InterviewSessionPro
   }, [messages])
 
   async function loadMessages() {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('messages')
       .select('*')
       .eq('session_id', session.id)
       .order('created_at', { ascending: true })
 
     if (!error && data) {
-      setMessages(data)
+      setMessages(data as Message[])
     }
   }
 
@@ -54,7 +54,7 @@ export default function InterviewSession({ elder, session }: InterviewSessionPro
 
     try {
       // 사용자 메시지 저장
-      const { data: userMsg, error: userError } = await supabase
+      const { data: userMsg, error: userError } = await (supabase as any)
         .from('messages')
         .insert({
           session_id: session.id,
@@ -100,7 +100,7 @@ export default function InterviewSession({ elder, session }: InterviewSessionPro
       }
 
       // AI 응답 저장
-      const { data: assistantMsg, error: assistantError } = await supabase
+      const { data: assistantMsg, error: assistantError } = await (supabase as any)
         .from('messages')
         .insert({
           session_id: session.id,

@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient()
+    const supabaseClient = supabase as any
 
     // 세션 정보 가져오기
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await supabaseClient
       .from('interview_sessions')
       .select('*')
       .eq('id', sessionId)
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 메시지 가져오기
-    const { data: messages, error: messagesError } = await supabase
+    const { data: messages, error: messagesError } = await supabaseClient
       .from('messages')
       .select('*')
       .eq('session_id', sessionId)
@@ -96,7 +97,7 @@ ${conversationText}
     }
 
     // 세션 종료 및 업데이트
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
       .from('interview_sessions')
       .update({
         ended_at: new Date().toISOString(),
@@ -114,7 +115,7 @@ ${conversationText}
 
     // 어르신의 위험도 업데이트 (세션 후 위험도가 높아진 경우)
     if (riskAnalysis.level === 'high' || riskAnalysis.level === 'medium') {
-      const { data: elder } = await supabase
+      const { data: elder } = await supabaseClient
         .from('elders')
         .select('risk_level')
         .eq('id', elderId)
@@ -122,7 +123,7 @@ ${conversationText}
 
       // 위험도가 높아진 경우에만 업데이트
       if (elder && elder.risk_level !== 'high') {
-        await supabase
+        await supabaseClient
           .from('elders')
           .update({
             risk_level: riskAnalysis.level,
@@ -132,7 +133,7 @@ ${conversationText}
 
       // 알림 생성 (high 위험도인 경우)
       if (riskAnalysis.level === 'high') {
-        await supabase.from('alerts').insert({
+        await supabaseClient.from('alerts').insert({
           elder_id: elderId,
           session_id: sessionId,
           level: 'high',

@@ -5,7 +5,10 @@ import { Database } from '@/types/database'
 
 type Biography = Database['public']['Tables']['biographies']['Row']
 
-async function getBiography(biographyId: string, elderId: string) {
+async function getBiography(
+  biographyId: string,
+  elderId: string
+): Promise<Biography | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('biographies')
@@ -18,7 +21,7 @@ async function getBiography(biographyId: string, elderId: string) {
     return null
   }
 
-  return data
+  return data as Biography
 }
 
 export default async function BiographyDetailPage({

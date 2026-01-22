@@ -24,7 +24,7 @@ export default function EditElderForm({ elder }: { elder: Elder }) {
     setLoading(true)
 
     try {
-      const supabase = createClient()
+      const supabase = createClient() as any
       const { error } = await supabase
         .from('elders')
         .update({

@@ -8,7 +8,7 @@ type Elder = Database['public']['Tables']['elders']['Row']
 type Session = Database['public']['Tables']['interview_sessions']['Row']
 type Message = Database['public']['Tables']['messages']['Row']
 
-async function getElder(id: string) {
+async function getElder(id: string): Promise<Elder | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -20,10 +20,10 @@ async function getElder(id: string) {
     return null
   }
 
-  return data
+  return data as Elder
 }
 
-async function getSession(sessionId: string, elderId: string) {
+async function getSession(sessionId: string, elderId: string): Promise<Session | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('interview_sessions')
@@ -36,10 +36,10 @@ async function getSession(sessionId: string, elderId: string) {
     return null
   }
 
-  return data
+  return data as Session
 }
 
-async function getMessages(sessionId: string) {
+async function getMessages(sessionId: string): Promise<Message[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('messages')
@@ -51,7 +51,7 @@ async function getMessages(sessionId: string) {
     return []
   }
 
-  return data || []
+  return (data || []) as Message[]
 }
 
 export default async function SessionDetailPage({

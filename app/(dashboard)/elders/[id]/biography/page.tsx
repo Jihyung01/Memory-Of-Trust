@@ -6,8 +6,9 @@ import BiographyInterview from './biography-interview'
 
 type Elder = Database['public']['Tables']['elders']['Row']
 type Session = Database['public']['Tables']['interview_sessions']['Row']
+type Biography = Database['public']['Tables']['biographies']['Row']
 
-async function getElder(id: string) {
+async function getElder(id: string): Promise<Elder | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -19,10 +20,10 @@ async function getElder(id: string) {
     return null
   }
 
-  return data
+  return data as Elder
 }
 
-async function getBiographySessions(elderId: string) {
+async function getBiographySessions(elderId: string): Promise<Session[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('interview_sessions')
@@ -36,10 +37,10 @@ async function getBiographySessions(elderId: string) {
     return []
   }
 
-  return data || []
+  return (data || []) as Session[]
 }
 
-async function getBiographies(elderId: string) {
+async function getBiographies(elderId: string): Promise<Biography[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('biographies')
@@ -52,7 +53,7 @@ async function getBiographies(elderId: string) {
     return []
   }
 
-  return data || []
+  return (data || []) as Biography[]
 }
 
 export default async function BiographyPage({

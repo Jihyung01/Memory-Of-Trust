@@ -7,7 +7,7 @@ import { riskLevelToColorClass, riskLevelToText } from '@/lib/risk'
 type Elder = Database['public']['Tables']['elders']['Row']
 type Session = Database['public']['Tables']['interview_sessions']['Row']
 
-async function getElder(id: string) {
+async function getElder(id: string): Promise<Elder | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -19,10 +19,10 @@ async function getElder(id: string) {
     return null
   }
 
-  return data
+  return data as Elder
 }
 
-async function getSessions(elderId: string) {
+async function getSessions(elderId: string): Promise<Session[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('interview_sessions')
@@ -35,7 +35,7 @@ async function getSessions(elderId: string) {
     return []
   }
 
-  return data || []
+  return (data || []) as Session[]
 }
 
 export default async function ElderDetailPage({

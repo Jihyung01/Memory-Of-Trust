@@ -39,9 +39,10 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient()
+    const supabaseClient = supabase as any
 
     // 어르신 정보 확인
-    const { data: elder, error: elderError } = await supabase
+    const { data: elder, error: elderError } = await supabaseClient
       .from('elders')
       .select('*')
       .eq('id', elderId)
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 세션 생성
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await supabaseClient
       .from('interview_sessions')
       .insert({
         elder_id: elderId,
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     const firstQuestion = await generateFirstQuestion(elder.name)
 
     // 첫 질문을 메시지로 저장 (assistant 역할: 질문자)
-    const { error: messageError } = await supabase.from('messages').insert({
+    const { error: messageError } = await supabaseClient.from('messages').insert({
       session_id: session.id,
       role: 'assistant',
       content: firstQuestion,

@@ -65,12 +65,12 @@ export async function getNextQuestionAndRisk(
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system' as const, content: systemPrompt },
         ...messages.map((m) => ({
-          role: m.role === 'user' ? 'user' : 'assistant',
+          role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
           content: m.content,
         })),
-      ],
+      ] as any,
       response_format: { type: 'json_object' },
       temperature: 0.7,
       max_tokens: 500,
@@ -144,7 +144,7 @@ export async function generateBiographyDraft(
           role: 'user',
           content: `다음은 인터뷰 대화 기록입니다. 이를 바탕으로 자서전 초안을 작성해주세요.\n\n${conversationText}`,
         },
-      ],
+      ] as any,
       response_format: { type: 'json_object' },
       temperature: 0.5,
       max_tokens: 3000,

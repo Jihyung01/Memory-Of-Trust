@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
 
     // 어르신 정보 가져오기
     const supabase = await createClient()
-    const { data: elder, error: elderError } = await supabase
+    const supabaseClient = supabase as any
+    const { data: elder, error: elderError } = await supabaseClient
       .from('elders')
       .select('*')
       .eq('id', elderId)
@@ -35,13 +36,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const elderData = elder as any
+
     // 이전 대화 히스토리 구성
-    const messages = [
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       {
-        role: 'system' as const,
+        role: 'system',
         content: `당신은 독거 어르신을 위한 친근하고 따뜻한 AI 상담사입니다. 
-어르신의 이름은 ${elder.name}입니다.
-${elder.birth_year ? `출생년도는 ${elder.birth_year}년입니다.` : ''}
+어르신의 이름은 ${elderData.name}입니다.
+${elderData.birth_year ? `출생년도는 ${elderData.birth_year}년입니다.` : ''}
 
 당신의 역할:
 1. 어르신의 생애와 기억에 대해 자연스럽고 친근하게 질문합니다.
@@ -60,15 +63,15 @@ ${elder.birth_year ? `출생년도는 ${elder.birth_year}년입니다.` : ''}
 
     // 대화 히스토리 추가
     if (conversationHistory && conversationHistory.length > 0) {
-      conversationHistory.forEach((msg: { role: string; content: string }) => {
+      conversationHistory.forEach((msg: { role: 'system' | 'user' | 'assistant'; content: string }) => {
         if (msg.role === 'user') {
           messages.push({
-            role: 'user' as const,
+            role: 'user',
             content: msg.content,
           })
         } else if (msg.role === 'assistant') {
           messages.push({
-            role: 'assistant' as const,
+            role: 'assistant',
             content: msg.content,
           })
         }
@@ -77,7 +80,7 @@ ${elder.birth_year ? `출생년도는 ${elder.birth_year}년입니다.` : ''}
 
     // 현재 사용자 메시지 추가
     messages.push({
-      role: 'user' as const,
+      role: 'user',
       content: message,
     })
 

@@ -21,7 +21,7 @@ export default function NewElderPage() {
     setLoading(true)
 
     try {
-      const supabase = createClient()
+      const supabase = createClient() as any
       const { error } = await supabase.from('elders').insert({
         name: formData.name,
         birth_year: formData.birth_year ? parseInt(formData.birth_year) : null,

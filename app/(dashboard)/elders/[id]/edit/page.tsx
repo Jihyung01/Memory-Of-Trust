@@ -1,8 +1,11 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import EditElderForm from './edit-form'
+import { Database } from '@/types/database'
 
-async function getElder(id: string) {
+type Elder = Database['public']['Tables']['elders']['Row']
+
+async function getElder(id: string): Promise<Elder | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -14,7 +17,7 @@ async function getElder(id: string) {
     return null
   }
 
-  return data
+  return data as Elder
 }
 
 export default async function EditElderPage({

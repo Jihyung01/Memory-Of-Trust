@@ -5,7 +5,7 @@ import { riskLevelToColorClass, riskLevelToText } from '@/lib/risk'
 
 type Elder = Database['public']['Tables']['elders']['Row']
 
-async function getElders() {
+async function getElders(): Promise<Elder[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -17,7 +17,7 @@ async function getElders() {
     return []
   }
 
-  return data || []
+  return (data || []) as Elder[]
 }
 
 export default async function EldersPage() {

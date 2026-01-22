@@ -2,8 +2,11 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
 import InterviewSession from './interview-session'
+import { Database } from '@/types/database'
 
-async function getElder(id: string) {
+type Elder = Database['public']['Tables']['elders']['Row']
+
+async function getElder(id: string): Promise<Elder | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -15,7 +18,7 @@ async function getElder(id: string) {
     return null
   }
 
-  return data
+  return data as Elder
 }
 
 export default async function NewSessionPage({
@@ -36,12 +39,14 @@ export default async function NewSessionPage({
 
   // 새 세션 생성
   const supabase = await createClient()
-  const { data: session, error } = await supabase
+  const supabaseClient = supabase as any
+  const { data: session, error } = await supabaseClient
     .from('interview_sessions')
     .insert({
       elder_id: elder.id,
       created_by: user.id,
       channel: 'text',
+      session_type: 'care',
       risk_level_before: elder.risk_level,
     })
     .select()

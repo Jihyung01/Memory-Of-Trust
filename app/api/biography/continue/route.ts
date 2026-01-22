@@ -40,9 +40,10 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient()
+    const supabaseClient = supabase as any
 
     // 세션 확인
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await supabaseClient
       .from('interview_sessions')
       .select('*')
       .eq('id', sessionId)
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1) 사용자 답변 저장 (user role)
-    const { error: answerError } = await supabase.from('messages').insert({
+    const { error: answerError } = await supabaseClient.from('messages').insert({
       session_id: sessionId,
       role: 'user',
       content: answer.trim(),
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) 지금까지의 대화 불러오기
-    const { data: messages, error: messagesError } = await supabase
+    const { data: messages, error: messagesError } = await supabaseClient
       .from('messages')
       .select('role, content, created_at')
       .eq('session_id', sessionId)
@@ -104,7 +105,9 @@ export async function POST(req: NextRequest) {
       await getNextQuestionAndRisk(simpleMessages)
 
     // 4) 질문 메시지를 assistant로 저장
-    const { error: questionError } = await supabase.from('messages').insert({
+    const { error: questionError } = await supabaseClient
+      .from('messages')
+      .insert({
       session_id: sessionId,
       role: 'assistant',
       content: nextQuestion,
@@ -120,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     // 6) 위험도가 높다면 alerts에 기록
     if (riskLevel === 'high' || riskLevel === 'medium') {
-      const { error: alertError } = await supabase.from('alerts').insert({
+      const { error: alertError } = await supabaseClient.from('alerts').insert({
         elder_id: elderId,
         session_id: sessionId,
         level: riskLevel === 'high' ? 'high' : 'medium',

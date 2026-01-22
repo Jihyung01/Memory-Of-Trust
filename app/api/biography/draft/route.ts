@@ -44,9 +44,10 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient()
+    const supabaseClient = supabase as any
 
     // 세션 확인
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await supabaseClient
       .from('interview_sessions')
       .select('*')
       .eq('id', sessionId)
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) GPT로 자서전 초안 생성
-    const simpleMessages = messages.map((msg) => ({
+    const simpleMessages = (messages || []).map((msg: any) => ({
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
     }))
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     )
 
     // 3) 기존 자서전이 있는지 확인 (같은 세션)
-    const { data: existingBio } = await supabase
+    const { data: existingBio } = await supabaseClient
       .from('biographies')
       .select('*')
       .eq('session_id', sessionId)
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     if (existingBio) {
       // 기존 자서전 업데이트
-      const { data: updatedBio, error: updateError } = await supabase
+      const { data: updatedBio, error: updateError } = await supabaseClient
         .from('biographies')
         .update({
           title,
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
           content,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', existingBio.id)
+        .eq('id', (existingBio as any).id)
         .select()
         .single()
 
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
     } else {
       // 새 자서전 생성
       // 기존 자서전의 최대 버전 확인
-      const { data: existingBios } = await supabase
+      const { data: existingBios } = await supabaseClient
         .from('biographies')
         .select('version')
         .eq('elder_id', elderId)
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
         ? existingBios[0].version + 1
         : 1
 
-      const { data: newBio, error: insertError } = await supabase
+      const { data: newBio, error: insertError } = await supabaseClient
         .from('biographies')
         .insert({
           elder_id: elderId,
@@ -172,7 +173,7 @@ export async function POST(req: NextRequest) {
 
     // 4) 세션 요약 업데이트 (선택사항)
     const summary = `자서전 초안 생성 완료: ${title}`
-    await supabase
+    await supabaseClient
       .from('interview_sessions')
       .update({ summary })
       .eq('id', sessionId)

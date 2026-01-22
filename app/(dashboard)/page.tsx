@@ -6,7 +6,7 @@ import { riskLevelToColorClass, riskLevelToText } from '@/lib/risk'
 
 type Elder = Database['public']['Tables']['elders']['Row']
 
-async function getEldersByRisk() {
+async function getEldersByRisk(): Promise<Elder[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -20,10 +20,10 @@ async function getEldersByRisk() {
     return []
   }
 
-  return data || []
+  return (data || []) as Elder[]
 }
 
-async function getEldersByLastSession() {
+async function getEldersByLastSession(): Promise<Elder[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('elders')
@@ -36,7 +36,7 @@ async function getEldersByLastSession() {
     return []
   }
 
-  return data || []
+  return (data || []) as Elder[]
 }
 
 export default async function DashboardPage() {
