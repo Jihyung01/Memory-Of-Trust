@@ -80,12 +80,18 @@ npm run dev
 ### 주요 테이블
 
 - **elders**: 어르신 프로필 정보
-- **sessions**: 인터뷰 세션
+- **interview_sessions**: 인터뷰 세션 (session_type: 'care' | 'biography' | 'checkin')
 - **messages**: 대화 메시지 로그
-- **biographies**: 자서전 데이터
+- **biographies**: 자서전 데이터 (outline, content 포함)
 - **alerts**: 위험도 알림
 
-자세한 스키마는 `supabase/migrations/001_initial_schema.sql` 참조
+### 자서전 인터뷰 엔진
+
+채널-중립적인 자서전 Q&A 엔진이 구현되어 있습니다:
+- **웹 채널**: `/dashboard/elders/[id]/biography` 페이지에서 사용
+- **ARS 채널**: 향후 STT/TTS로 연동 가능 (동일 API 사용)
+
+자세한 스키마는 `supabase/migrations/` 폴더의 마이그레이션 파일 참조
 
 ## 개발 로드맵
 
@@ -94,8 +100,9 @@ npm run dev
 3. ✅ Auth + 기본 Admin UI
 4. ✅ 인터뷰 세션 UI + 텍스트 기반 GPT 연동
 5. ✅ 위험도 분석 로직 구현
-6. ⏳ 음성 입력(STT) 및 TTS 통합
-7. ⏳ 자서전 생성/편집 화면 구현
+6. ✅ **자서전 인터뷰 엔진 구현** (채널-중립 Q&A 엔진)
+7. ⏳ 음성 입력(STT) 및 TTS 통합
+8. ⏳ ARS(전화) 연동
 
 ## 배포
 

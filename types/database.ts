@@ -17,7 +17,8 @@ export type Json =
 export type RiskLevel = 'low' | 'medium' | 'high'
 export type MessageRole = 'user' | 'assistant' | 'system' | 'care_manager'
 export type EmotionType = 'neutral' | 'sad' | 'angry' | 'anxious' | 'happy'
-export type SessionChannel = 'text' | 'phone_mock' | 'real_ars'
+export type SessionChannel = 'web' | 'text' | 'phone' | 'phone_mock' | 'real_ars' | 'kiosk'
+export type SessionType = 'care' | 'biography' | 'checkin'
 
 export interface Database {
   public: {
@@ -72,7 +73,8 @@ export interface Database {
           summary: string | null
           risk_level_before: RiskLevel
           risk_level_after: RiskLevel | null
-          channel: SessionChannel
+          channel: string
+          session_type: SessionType
           created_by: string
           created_at: string
         }
@@ -84,7 +86,8 @@ export interface Database {
           summary?: string | null
           risk_level_before?: RiskLevel
           risk_level_after?: RiskLevel | null
-          channel?: SessionChannel
+          channel?: string
+          session_type?: SessionType
           created_by: string
           created_at?: string
         }
@@ -96,7 +99,8 @@ export interface Database {
           summary?: string | null
           risk_level_before?: RiskLevel
           risk_level_after?: RiskLevel | null
-          channel?: SessionChannel
+          channel?: string
+          session_type?: SessionType
           created_by?: string
           created_at?: string
         }
@@ -134,7 +138,9 @@ export interface Database {
         Row: {
           id: string
           elder_id: string
+          session_id: string | null
           title: string
+          outline: string | null
           content: string
           version: number
           created_at: string
@@ -143,7 +149,9 @@ export interface Database {
         Insert: {
           id?: string
           elder_id: string
+          session_id?: string | null
           title: string
+          outline?: string | null
           content: string
           version?: number
           created_at?: string
@@ -152,7 +160,9 @@ export interface Database {
         Update: {
           id?: string
           elder_id?: string
+          session_id?: string | null
           title?: string
+          outline?: string | null
           content?: string
           version?: number
           created_at?: string
