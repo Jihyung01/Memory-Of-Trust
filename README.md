@@ -91,11 +91,24 @@ npm run dev
 
 1. ✅ 프로젝트 구조 세팅 (Next.js + TS + Supabase 연동)
 2. ✅ DB 스키마 설계 및 마이그레이션 코드 작성
-3. ⏳ Auth + 기본 Admin UI
-4. ⏳ 인터뷰 세션 UI + 텍스트 기반 GPT 연동
-5. ⏳ 음성 입력(STT) 및 TTS 통합
-6. ⏳ 위험도 분석 로직 구현
+3. ✅ Auth + 기본 Admin UI
+4. ✅ 인터뷰 세션 UI + 텍스트 기반 GPT 연동
+5. ✅ 위험도 분석 로직 구현
+6. ⏳ 음성 입력(STT) 및 TTS 통합
 7. ⏳ 자서전 생성/편집 화면 구현
+
+## 배포
+
+### GitHub 저장소
+- **Repository**: [https://github.com/Jihyung01/Memory-Of-Trust](https://github.com/Jihyung01/Memory-Of-Trust)
+
+### Vercel 배포
+배포 가이드는 `VERCEL_DEPLOY.md` 파일을 참조하세요.
+
+1. [Vercel](https://vercel.com)에 로그인
+2. GitHub 저장소 Import
+3. 환경변수 설정 (Supabase, OpenAI)
+4. Deploy
 
 ## 보안 및 개인정보 보호
 
