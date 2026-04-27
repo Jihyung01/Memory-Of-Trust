@@ -28,8 +28,8 @@ INSERT INTO family_members (
   notification_kakao, notification_email
 ) VALUES (
   '00000000-0000-0000-0000-000000000010',
-  -- TODO: replace with real auth.users.id (예: SELECT id FROM auth.users WHERE email = 'tbvj123wlgud@gmail.com')
-  '00000000-0000-0000-0000-000000000999',
+  -- auth.users.id (provided): db551dae-afd4-4361-ac3e-11f79ddf9be4
+  'db551dae-afd4-4361-ac3e-11f79ddf9be4',
   '00000000-0000-0000-0000-000000000001',
   '큰아들',
   TRUE,
