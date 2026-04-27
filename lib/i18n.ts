@@ -62,6 +62,7 @@ export const ko = {
     photos: {
       title: "사진 업로드",
       subtitle: "사진은 가장 강력한 기억 트리거입니다. 옛 사진일수록 좋아요.",
+      fileLabel: "사진 파일",
       uploadButton: "사진 추가",
       captionLabel: "메모 (예: 결혼식, 1968년)",
       yearLabel: "추정 연도",
