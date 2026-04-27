@@ -1,274 +1,124 @@
-# MOT — Memory Of Trust
+# MOT (Memory Of Trust)
 
-**기억을 잃지 않는 돌봄 인프라**
-
-매일 저녁 찾아오는 손님. 나눈 이야기가 다음날 편지가 되어 돌아오고, 결국 사랑하는 사람에게 닿는다.
-
----
-
-## 1. 프로젝트 정체성
-
-### 한 문장
-
-> MOT는 고령자·시한부 환자의 기억을 자산화하는 돌봄 인프라다.
-
-### 3-Pillar
-
-- **Care (돌봄)** — 매일 찾아오는 대화, 위험 신호 감지
-- **Memory (기억)** — 삶의 서사를 구조화해 보존
-- **Trust (신탁)** — 지정된 시점·대상에게 기억이 닿도록 관리
-
-### 경쟁 서비스와의 차이
-
-ARS, 스마트 스피커, AI 챗봇, 방문 요양, 자서전 서비스는 모두 **수집하고 끝난다**. MOT는 **수집 → 변환 → 돌려줌 → 닿게 함**의 네 단계를 책임진다.
+> 라디오처럼 말 걸고, 액자처럼 기억 보여주는 **AI 기억 수집 장치**.
+>
+> 어르신 거실에 들어간 7인치 태블릿이 매일 사진을 보여주며 부드럽게 말을 건다.
+> 그 발화는 영원히 보존되고, 가족에게 주간 카드로 전달된다.
+> 1년 후, 그 데이터는 자서전이 된다.
 
 ---
 
-## 2. 3-Layer 경험 설계
+## 본질 (절대 잊지 말 것)
 
-- **Layer A — 찾아옴 (The Visit)** : 매일 정해진 시간, AI가 먼저 말을 건다. 거절해도 내일 다시 온다.
-- **Layer B — 돌려줌 (The Gift Back)** : 다음날 대화가 편지·그림·(v2 드라마)로 변환되어 본인에게 재생된다.
-- **Layer C — 닿게 함 (The Delivery)** : 가족에게 실시간 카드, 지정된 시점에 예약 전달(v2).
+> "인간은 죽기 전에 자신의 가치를 남기고 가고 싶어한다. 기억되고 싶어한다."
 
-### 시한부 모드 — Final Visitor (v2)
+**자서전 서비스가 아니다.** 인간의 보존 욕구를 충족시키는 서비스다.
+자서전은 1차 산출물일 뿐이고, 같은 데이터에서 편지·미래편지·사과집·가치관집·추모영상이 나온다.
 
-- 더 빠른 리듬 (하루 여러 회, 체력 따라 조절)
-- 과거 수집이 아닌 **미래를 향한 메시지 제작**
-- 생전에 "살아있는 자서전" 완결본 전달
+- **사용자**: 70~90대 어르신
+- **결제자**: 40~60대 자녀 (90% 자녀, 10% 본인)
 
 ---
 
-## 3. 기술 원칙 (절대 불변)
+## 빠른 시작
 
-1. **원본은 덮어쓰지 않는다** — 모든 발화는 `utterance_events`로 append-only 저장
-2. **정제는 삭제가 아니라 파생이다** — 원본에서 다수 버전을 만들되 원본은 그대로
-3. **기억은 층으로 나눈다** — 원본 / 구조화 / 생성물 / 전달
-4. **개인화 모델을 별도 학습시키지 않는다** — 프로필 + 기억 + 최근 상태를 매 세션 주입
-5. **AI 추출은 후보다** — `memory_candidates`로 들어가고, 검증을 거쳐 `memory_facts`로 승격
+```powershell
+# 1. 의존성
+pnpm install
 
----
+# 2. .env.local 설정
+copy .env.example .env.local
+# 그리고 .env.local 의 값들을 채워라.
+# (Supabase URL/키, OpenAI 키, 클로바보이스 키 등)
 
-## 4. 아키텍처
+# 3. Supabase 마이그레이션
+# supabase/migrations/20260427000001_initial_schema.sql → SQL Editor 에 붙여넣고 RUN
+# supabase/migrations/20260427000002_rls_policies.sql → 같은 방식
+# supabase/seed.sql → 시드 데이터
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  사용자 (고령자)                                           │
-│  태블릿 — Next.js PWA (전체화면 Kiosk 모드)                 │
-│    ↓ WebRTC                                               │
-│  OpenAI Realtime API (gpt-4o-realtime)                    │
-│    — 실시간 음성 대화, 저지연                                │
-└──────────────┬───────────────────────────────────────────┘
-               │ 세션 종료
-               ▼
-┌──────────────────────────────────────────────────────────┐
-│  백엔드 (Next.js API Routes, Vercel)                       │
-│    - 발화 이벤트 영구 저장                                   │
-│    - 후처리 큐 (Supabase Queue / Vercel Cron)              │
-│                                                           │
-│  후처리 단계 (OpenAI Responses API, 구조화 출력)            │
-│    1. 기억 후보 추출 → memory_candidates                   │
-│    2. 엔티티 리졸브 → entities, relationships              │
-│    3. 승격 규칙 적용 → memory_facts                        │
-│    4. 기억 편지 생성 → memory_letters                      │
-│    5. 위험 평가 → risk_signals                             │
-│    6. 페르소나 상태 갱신 → persona_state                    │
-└──────────────┬───────────────────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────────────────────────┐
-│  저장소                                                    │
-│  - Supabase Postgres (모든 메타)                          │
-│  - Supabase Storage (음성 원본, 생성 오디오)                │
-│  - pgvector (memory_facts, entities 임베딩)               │
-└──────────────┬───────────────────────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────────────────────────┐
-│  전달 채널                                                  │
-│  - 카카오 알림톡 (가족에게 오늘의 기억 카드 링크)              │
-│  - 웹 뷰어 (카드·편지 공유 페이지)                            │
-│  - 가족 대시보드 (Next.js, 같은 도메인)                      │
-└──────────────────────────────────────────────────────────┘
+# 4. 타입 생성
+pnpm supabase:gen-types
+
+# 5. 개발 서버
+pnpm dev
 ```
 
-### v2에서 추가되는 진입 경로
-
-- **전화 방문 모드** — Twilio Media Streams + Realtime API. 태블릿 사용 불가 사용자용.
-- **가족 네이티브 앱** — Expo. 푸시·위젯이 카톡보다 효과적이라 증명될 때.
-- **전용 디바이스** — ESP32 기반 탁상 라디오. 크라우드펀딩 경로.
-
 ---
 
-## 5. 스택 결정과 근거
-
-| 계층 | 선택 | 근거 |
-|------|------|------|
-| 사용자 프론트 | Next.js PWA (태블릿) | 화면 필요(돌려줌), 네이티브 불필요 |
-| 가족 프론트 | Next.js 웹 (같은 레포) | 카톡 링크 즉시 열람, 인앱결제 회피 |
-| 실시간 대화 | OpenAI Realtime API (WebRTC 직결) | Vapi 의존 제거, 저지연, 비용 제어 |
-| 후처리 | OpenAI Responses API | 구조화 출력 안정성 |
-| DB | Supabase Postgres + pgvector | 관계 + 벡터 단일 인프라 |
-| 파일 저장 | Supabase Storage | 음성 원본 |
-| 배포 | Vercel | Next.js 최적화, 크론 포함 |
-| TTS (v1) | OpenAI Audio | 초기 비용 |
-| TTS (v2) | ElevenLabs | 품질 업그레이드 |
-| 알림 | 카카오 알림톡 (NHN Cloud / Aligo) | 한국 가족 접근성 |
-
-### React Native Expo를 쓰지 않는 이유
-
-MOT의 1차 결제자는 **가족**이다. 가족은 30~60대, 스마트폰에 앱이 이미 과포화 상태고, 카톡 링크로 열리는 웹을 거부감 없이 본다. 네이티브 앱은 **스토어 심사 병목, 인앱결제 수수료 30%, 설치 마찰** 세 가지를 가져오는데 MOT 구조상 이점이 없다. 고령자는 태블릿 한 대를 가족이 세팅해주면 끝.
-
-WhereHere에서 얻은 Expo 경험은 Phase 2(가족 네이티브 앱 필요 확인 시)에 쓴다.
-
-### 전용 디바이스를 처음부터 만들지 않는 이유
-
-조달·OS·펌웨어·OTA·수리·인증을 전부 끌고 온다. MOT의 첫 검증은 "편안하게 말하게 되는가"와 "돌려줌이 감동을 주는가" 두 가지. 이는 태블릿만으로 검증 가능. 디바이스는 이 두 가지가 yes로 나온 후 Phase 3에서 판다.
-
----
-
-## 6. MVP 범위 (v1 — 지금 만드는 것)
-
-### 포함
-
-- 태블릿 대화 세션 (전체화면 PWA + Realtime API)
-- 사용자 프로필, 동의 기록 (consent_records)
-- 발화 이벤트 원본 영구 저장 (utterance_events)
-- 기억 후보 추출 → 검증 → 사실 승격 (candidates → facts)
-- 통합 엔티티 레지스트리 (사람·장소·사물)
-- 관계 그래프 (basic)
-- 기억 편지 생성 (매일 1회, 다음날 아침)
-- 가족 카드 전송 (카카오 알림톡 → 웹뷰어 링크)
-- 위험 신호 감지 + 가족 알림
-- 감정 타임라인
-- 페르소나 상태 관리 (다음 세션 컨텍스트)
-- 열린 루프 (open_loops — 미해결 주제 재방문)
-
-### 제외 (v2)
-
-- 기억 드라마 (주간 라디오 드라마)
-- 예약 전달 (scheduled future messages)
-- 시한부 모드 (Final Visitor)
-- 기억 그림·노래 자동 생성
-- 전화 방문 모드 (Twilio)
-
-### 제외 (v3)
-
-- 자동 메모아 (전체 자서전 책)
-- 기억관 (3D 공간)
-- 전용 하드웨어
-- 기억 신탁 금융 상품
-
----
-
-## 7. 비용 가드레일
-
-MVP 운영비는 사용자 수와 선형 상승. 다음 규칙을 지킨다.
-
-- **Realtime API는 실시간 대화 세션에만** (일 1회, 10~20분)
-- **편지 생성은 배치 처리** (저녁 대화 후 다음날 아침 한 번)
-- **이미지·음악 생성은 수동 트리거만** (매일 자동 금지)
-- **드라마는 v2 진입 시 주 1회 상한**
-- **원본 오디오는 저장하되 재분석은 요청 시만**
-
-예상 운영비 (사용자 100명 기준):
-- OpenAI Realtime + Responses: 월 $250~450
-- Supabase Pro: $25
-- Vercel Pro: $20
-- 카카오 알림톡: 월 ₩50,000~150,000
-- 도메인·인증서: 연 ₩30,000
-- **총합: 월 약 60~120만원**
-
----
-
-## 8. 개발 로드맵
-
-| Phase | 기간 | 내용 | 산출물 |
-|-------|------|------|--------|
-| 0. 인프라 | 1주 | Supabase, OpenAI, 도메인, 레포, Vercel | 빈 Next.js 배포됨 |
-| 1. 대화 엔진 | 2주 | 태블릿 PWA, Realtime API, utterance_events 저장 | 본인 테스트 대화 성공 |
-| 2. 후처리 | 2주 | 추출, 엔티티 리졸브, 승격, 편지 | 편지 자동 생성 확인 |
-| 3. 가족 채널 | 1주 | 가족 웹, 카톡, 권한 | 가족 카드 수신 |
-| 4. 위험·감정 | 1주 | 감지 + 알림, 감정 타임라인 | 위험 알림 성공 |
-| 5. 1인 파일럿 | 1주 | 주변 어르신 1분, 매일 튜닝 | 프롬프트 v2 |
-| 6. 10인 베타 | 4주 | 안정화, 가족 피드백 | v1 Release Candidate |
-
----
-
-## 9. 디렉토리 구조
+## 디렉토리 구조
 
 ```
 mot/
-├── app/
-│   ├── visit/              # 태블릿 전용 대화 화면 (kiosk)
-│   │   └── [userId]/
-│   ├── family/             # 가족 대시보드
-│   │   ├── login/
-│   │   └── [userId]/       # 특정 어르신 뷰
-│   ├── memory/             # 공유 카드 (카톡 링크 목적지)
-│   │   └── [shareSlug]/
-│   └── api/
-│       ├── visit/
-│       │   ├── start/      # Realtime 세션 토큰 발급
-│       │   └── end/        # 세션 종료, 후처리 큐잉
-│       ├── process/
-│       │   ├── extract/    # 기억 후보 추출
-│       │   ├── resolve/    # 엔티티 매칭
-│       │   ├── promote/    # 사실 승격
-│       │   └── letter/     # 편지 생성
-│       ├── deliver/
-│       │   └── kakao/      # 알림톡 발송
-│       └── cron/
-│           ├── daily-letters/
-│           └── visit-triggers/
-├── lib/
-│   ├── prompts.ts          # 모든 프롬프트 템플릿
-│   ├── supabase.ts         # DB 클라이언트 (server)
-│   ├── supabase-client.ts  # DB 클라이언트 (browser)
-│   ├── openai.ts           # OpenAI 클라이언트
-│   ├── context.ts          # 세션 컨텍스트 빌더
-│   ├── kakao.ts            # 알림톡 헬퍼
-│   └── types.ts            # 공통 타입
+├── AGENTS.md                  # Codex 운영 규칙
+├── CLAUDE.md                  # Claude Code 운영 규칙
+├── .ai/
+│   ├── harness.md             # 에이전트가 가장 먼저 읽는 문서
+│   ├── conventions.md         # 코딩 컨벤션
+│   └── AGENT_INDEX.md         # 에이전트 카탈로그
+├── agent-prompts/             # 역할별 프롬프트 (모델 명시)
+├── docs/
+│   ├── PRODUCT.md
+│   ├── ARCHITECTURE.md
+│   ├── SCHEMA.md
+│   ├── PROMPTS.md
+│   └── ROADMAP.md
+├── scripts/                   # Windows 배치 스크립트
+├── app/                       # Next.js App Router
+├── lib/                       # 공통 라이브러리
+│   ├── ai/prompts.ts          # LLM 프롬프트 카탈로그
+│   ├── env.ts                 # 환경 변수 검증
+│   └── i18n.ts                # 한국어 UI 텍스트
 ├── supabase/
-│   └── schema.sql          # DB 스키마 (복붙용)
+│   ├── migrations/
+│   └── seed.sql
 ├── public/
-│   └── manifest.json       # PWA 매니페스트
-├── .env.example
-├── next.config.js
-└── package.json
+└── ...
 ```
 
 ---
 
-## 10. 제품 금기 (어기면 MOT가 아니게 됨)
+## 에이전트 사용법
 
-대화 중 금지:
-- "기록합니다", "저장됐습니다" 류 수집 언어
-- "어떻게 도와드릴까요?" 류 챗봇 언어
-- "힘내세요!", "긍정적으로!" 류 상투어
-- 가족에 대한 평가·판단
-- 3턴 이상 같은 주제 집요하게 파기
-- 의학·법률·재무 조언
+이 레포는 **Claude Opus 4.7** 과 **GPT-5.5 in Codex** 두 모델을 역할 분담한다.
 
-후처리 단계 금지:
-- 원본 발화 문구 임의 수정
-- 확인 안 된 사실을 facts에 직접 쓰기 (반드시 candidates 경유)
-- 본인이 3회 회피한 주제 재질문 (respected_silence로 고정)
-- 본인이 원치 않는 가족에게 카드 전송
+| 작업 | 1차 | 2차 | 프롬프트 |
+|---|---|---|---|
+| 신규 기능 설계 | Claude Opus 4.7 | Codex 실행 | `agent-prompts/01_architect_claude.md` |
+| 코드 구현 | Codex GPT-5.5 | Claude 리뷰 | `agent-prompts/02_executor_codex.md` |
+| Diff 리뷰 | Claude Opus 4.7 | — | `agent-prompts/03_reviewer_claude.md` |
+| 운영 장애 | Codex GPT-5.5 | Claude 리뷰 | `agent-prompts/04_bugfix_codex.md` |
+| 배포 직전 | Codex GPT-5.5 | — | `agent-prompts/05_release_check_codex.md` |
+| Sprint 0 | Codex GPT-5.5 | — | `agent-prompts/06_sprint0_codex.md` |
+| LLM 프롬프트 튜닝 | Claude Opus 4.7 | — | `agent-prompts/07_prompt_engineer_claude.md` |
+| 어르신 UX 검수 | Claude Opus 4.7 (거부권 보유) | — | `agent-prompts/08_elder_ux_guardian_claude.md` |
 
----
-
-## 11. 시작하기
-
-상세는 채팅의 "스텝별 실행 가이드" 참조. 요약:
-
-1. `.env.example` → `.env.local` 복사, 키 입력
-2. Supabase 프로젝트 생성 → SQL Editor에서 `supabase/schema.sql` 전체 실행
-3. `npm install`
-4. `npm run dev`
-5. 브라우저에서 `http://localhost:3000/visit/[test-user-uuid]` 접근
+전체 워크플로우는 `.ai/AGENT_INDEX.md` 참조.
 
 ---
 
-## 라이선스
+## Sprint 0 (현재)
 
-Proprietary. All rights reserved. Memory Of Trust (MOT).
+**목표**: 1주일 안에 어르신 1명이 사진 보고 한 마디 하면 그게 DB에 저장되고 자녀 대시보드에서 볼 수 있는 최소 루프.
+
+`scripts\sprint0-init.bat` 실행하면 Codex 가 T1~T8을 순서대로 진행한다.
+
+자세한 진행은 `agent-prompts/06_sprint0_codex.md` 와 `.ai/harness.md` §11 참조.
+
+---
+
+## 절대 하지 말 것
+
+1. 어르신 화면에 "기록되었습니다", "저장합니다", "어떻게 도와드릴까요?" 같은 챗봇/수집 언어 ✗
+2. `raw_utterances` UPDATE/DELETE 코드 작성 ✗ (DB 트리거가 강제로 막지만, 코드도 시도하지 않는다)
+3. 어르신 화면에 인터랙티브 요소 5개 초과 ✗
+4. 자체 하드웨어 제작 (Phase 3 이후 OEM 협업으로만)
+5. 가족 평가 ("따님이 잘못하셨네요" 류) LLM 응답 ✗
+6. API 키 하드코딩 ✗ (반드시 `lib/env.ts` 통해)
+
+자세한 룰은 `AGENTS.md` §2, `CLAUDE.md` §3 참조.
+
+---
+
+## 라이센스 / 상태
+
+Private. v3 — 2026-04-27.
