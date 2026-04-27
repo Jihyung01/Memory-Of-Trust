@@ -1,0 +1,23 @@
+{
+  "name": "MOT — 기억의 신탁",
+  "short_name": "MOT",
+  "description": "매일 저녁 찾아오는 손님. 기억을 잃지 않는 돌봄 인프라.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
