@@ -21,6 +21,9 @@ export const ko = {
     micStart: "이야기 시작",
     micStop: "잠시 멈추기",
 
+    // 사진 문장이 늦게 올 때 자연스러운 기본 문장
+    promptFallback: "사진을 보며 떠오르는 이야기를 들려주세요",
+
     // 침묵 / 대기 (시각만)
     listening: "...", // 듣는 중일 때 시각 표현 (텍스트 최소화)
 
