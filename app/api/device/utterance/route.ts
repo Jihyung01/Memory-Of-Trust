@@ -11,6 +11,8 @@ import { createHmac } from "node:crypto";
 
 import { env } from "@/lib/env";
 import {
+  type DeviceAuthRecord,
+  fetchDeviceByRawTokenDev,
   fetchDeviceByTokenHash,
   insertRawUtterance,
   uploadAudioToStorage,
@@ -27,11 +29,23 @@ function hashDeviceToken(deviceToken: string): string {
 interface UtteranceRequest {
   device_token: string;
   transcript: string;
-  audio_duration_sec: number;
+  audio_duration_sec?: number;
   prompt_id?: string;
   source_photo_id?: string;
   started_at: string;
   ended_at: string;
+}
+
+async function fetchDeviceForToken(deviceToken: string): Promise<DeviceAuthRecord | null> {
+  const device = await fetchDeviceByTokenHash(hashDeviceToken(deviceToken));
+  if (device || env.NODE_ENV === "production") return device;
+
+  // TODO: Phase 2 진입 시 모든 device_token 을 HMAC 으로 통일하고 이 폴백 제거
+  const devDevice = await fetchDeviceByRawTokenDev(deviceToken);
+  if (devDevice) {
+    console.warn(`[dev] using raw token fallback for device ${devDevice.id}`);
+  }
+  return devDevice;
 }
 
 export async function POST(request: Request) {
@@ -55,8 +69,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    if ((!audioFile || audioFile.size === 0) && env.NODE_ENV === "production") {
+      return Response.json({ error: "audio is required" }, { status: 400 });
+    }
+
     // 디바이스 인증
-    const device = await fetchDeviceByTokenHash(hashDeviceToken(meta.device_token));
+    const device = await fetchDeviceForToken(meta.device_token);
     if (!device) {
       return Response.json({ error: "Invalid device token" }, { status: 401 });
     }
@@ -78,13 +96,14 @@ export async function POST(request: Request) {
       promptId: meta.prompt_id ?? null,
       sourcePhotoId: meta.source_photo_id ?? null,
       audioUrl,
-      audioDurationSec: meta.audio_duration_sec,
+      audioDurationSec: meta.audio_duration_sec ?? 0,
       transcript: meta.transcript,
       startedAt: meta.started_at,
       endedAt: meta.ended_at,
     });
 
     return Response.json({
+      utterance_id: utterance.id,
       id: utterance.id,
       elder_id: device.elder_id,
     });

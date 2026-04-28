@@ -2,6 +2,8 @@ import { createHmac } from "node:crypto";
 
 import { env } from "@/lib/env";
 import {
+  type DeviceAuthRecord,
+  fetchDeviceByRawTokenDev,
   fetchDeviceByTokenHash,
   touchDeviceLastActive,
 } from "@/lib/supabase/server";
@@ -39,6 +41,19 @@ function isSafeTokenString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 512;
 }
 
+async function fetchDeviceForToken(deviceToken: string): Promise<DeviceAuthRecord | null> {
+  const tokenHash = hashDeviceToken(deviceToken);
+  const device = await fetchDeviceByTokenHash(tokenHash);
+  if (device || env.NODE_ENV === "production") return device;
+
+  // TODO: Phase 2 진입 시 모든 device_token 을 HMAC 으로 통일하고 이 폴백 제거
+  const devDevice = await fetchDeviceByRawTokenDev(deviceToken);
+  if (devDevice) {
+    console.warn(`[dev] using raw token fallback for device ${devDevice.id}`);
+  }
+  return devDevice;
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as DeviceAuthRequest;
@@ -47,8 +62,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "device_token is required" }, { status: 400 });
     }
 
-    const tokenHash = hashDeviceToken(body.device_token);
-    const device = await fetchDeviceByTokenHash(tokenHash);
+    const device = await fetchDeviceForToken(body.device_token);
 
     if (!device) {
       return Response.json({ error: "Invalid device token" }, { status: 401 });

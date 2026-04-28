@@ -1,55 +1,42 @@
-/**
- * POST /api/tts
- *
- * 텍스트 → OpenAI TTS → mp3 바이너리 응답.
- * 디바이스에서 <audio> 자동 재생용.
- */
-
-import { createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import { synthesizeSpeech } from "@/lib/ai/openai-tts";
-import { env } from "@/lib/env";
-import { fetchDeviceByTokenHash } from "@/lib/supabase/server";
+import { uploadTtsAudioAndCreateSignedUrl } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-function hashDeviceToken(deviceToken: string): string {
-  return createHmac("sha256", env.DEVICE_AUTH_SECRET)
-    .update(deviceToken, "utf8")
-    .digest("hex");
-}
-
 export async function POST(request: Request) {
+  const startedAt = Date.now();
+
   try {
     const body = (await request.json()) as {
-      device_token?: string;
-      text?: string;
+      text?: unknown;
     };
 
-    if (!body.device_token || !body.text) {
-      return Response.json({ error: "device_token and text required" }, { status: 400 });
+    if (typeof body.text !== "string") {
+      return Response.json({ error: "text is required" }, { status: 400 });
     }
 
-    // 디바이스 인증
-    const device = await fetchDeviceByTokenHash(hashDeviceToken(body.device_token));
-    if (!device) {
-      return Response.json({ error: "Invalid device token" }, { status: 401 });
+    const text = body.text.trim();
+    if (!text || text.length > 1000) {
+      return Response.json({ error: "text must be 1-1000 characters" }, { status: 400 });
     }
 
     const mp3Buffer = await synthesizeSpeech({
-      text: body.text,
-      speed: 0.85, // 어르신용 약간 느리게 (OpenAI: 0.25~4.0)
+      text,
+      speed: 0.85,
     });
 
-    return new Response(new Uint8Array(mp3Buffer), {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Length": String(mp3Buffer.byteLength),
-        "Cache-Control": "no-store",
-      },
+    const audioUrl = await uploadTtsAudioAndCreateSignedUrl({
+      buffer: mp3Buffer,
+      storagePath: `tts/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.mp3`,
     });
+
+    return Response.json({ audio_url: audioUrl });
   } catch (error) {
     console.error("POST /api/tts error:", error);
     return Response.json({ error: "TTS failed" }, { status: 502 });
+  } finally {
+    console.log(`[tts] took ${Date.now() - startedAt}ms`);
   }
 }

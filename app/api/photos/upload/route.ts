@@ -2,8 +2,8 @@ import {
   createSupabaseUserClient,
   fetchFamilyMemberForElder,
   insertFamilyPhoto,
-  uploadFamilyPhoto,
 } from "@/lib/supabase/family";
+import { uploadFamilyPhotoToStorage } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -84,8 +84,7 @@ export async function POST(request: Request) {
 
     const storagePath = createStoragePath({ elderId, file: photo });
 
-    await uploadFamilyPhoto({
-      db,
+    await uploadFamilyPhotoToStorage({
       file: photo,
       storagePath,
     });

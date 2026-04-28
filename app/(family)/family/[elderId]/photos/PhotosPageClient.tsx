@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { ko } from "@/lib/i18n";
@@ -15,39 +15,75 @@ export function PhotosPageClient({ elderId }: PhotosPageClientProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [latestPhoto, setLatestPhoto] = useState<{
+    url: string;
+    caption: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (latestPhoto) {
+        URL.revokeObjectURL(latestPhoto.url);
+      }
+    };
+  }, [latestPhoto]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const form = event.currentTarget;
     setIsSubmitting(true);
     setMessage(null);
 
-    const db = getSupabaseBrowserClient();
-    const {
-      data: { session },
-    } = await db.auth.getSession();
+    try {
+      const db = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await db.auth.getSession();
 
-    if (!session) {
-      router.replace("/family/login");
-      return;
-    }
+      if (!session) {
+        router.replace("/family/login");
+        return;
+      }
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    formData.set("elder_id", elderId);
+      const formData = new FormData(form);
+      const photo = formData.get("photo");
+      formData.set("elder_id", elderId);
 
-    const response = await fetch("/api/photos/upload", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: formData,
-    });
+      const response = await fetch("/api/photos/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
 
-    setIsSubmitting(false);
+      if (response.ok) {
+        if (latestPhoto) {
+          URL.revokeObjectURL(latestPhoto.url);
+        }
 
-    if (response.ok) {
-      form.reset();
-      setMessage(ko.family.photos.successToast);
+        const caption = formData.get("caption");
+        if (photo instanceof File) {
+          setLatestPhoto({
+            url: URL.createObjectURL(photo),
+            caption:
+              typeof caption === "string" && caption.trim().length > 0
+                ? caption.trim()
+                : null,
+          });
+        }
+
+        form.reset();
+        setMessage(ko.family.photos.successToast);
+      } else {
+        setMessage(ko.family.photos.uploadFailed);
+      }
+    } catch (error) {
+      console.error("Photo upload failed:", error);
+      setMessage(ko.family.photos.uploadFailed);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -124,6 +160,24 @@ export function PhotosPageClient({ elderId }: PhotosPageClientProps) {
           <p className="mt-5 rounded-md bg-amber-50 px-4 py-3 text-stone-700">
             {message}
           </p>
+        ) : null}
+
+        {latestPhoto ? (
+          <section className="mt-8 border-t border-stone-200 pt-6">
+            <h2 className="text-xl font-semibold">{ko.family.photos.latestTitle}</h2>
+            <figure className="mt-4 overflow-hidden rounded-md border border-stone-200 bg-white">
+              <img
+                alt={latestPhoto.caption ?? ko.family.photos.latestImageAlt}
+                className="max-h-[420px] w-full object-contain"
+                src={latestPhoto.url}
+              />
+              {latestPhoto.caption ? (
+                <figcaption className="px-4 py-3 text-stone-700">
+                  {latestPhoto.caption}
+                </figcaption>
+              ) : null}
+            </figure>
+          </section>
         ) : null}
       </section>
     </main>

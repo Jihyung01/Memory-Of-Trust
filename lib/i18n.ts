@@ -56,6 +56,9 @@ export const ko = {
       loginEmailLabel: "이메일 주소",
       loginSubmit: "매직 링크 받기",
       loginSent: "메일을 보냈어요. 메일함을 확인해 주세요.",
+      linkExpired: "이전 매직 링크가 만료되었어요. 아래에서 다시 받아주세요.",
+      noLinkedElder: "이 계정에 연결된 어르신이 없어요.",
+      resendCooldown: (sec: number) => `${sec}초 뒤에 다시 받기`,
       logout: "로그아웃",
     },
 
@@ -68,6 +71,9 @@ export const ko = {
       yearLabel: "추정 연도",
       peopleLabel: "사진 속 인물 (쉼표로 구분)",
       successToast: "사진을 추가했어요.",
+      uploadFailed: "사진 업로드에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      latestTitle: "방금 추가한 사진",
+      latestImageAlt: "방금 추가한 사진",
     },
 
     questions: {

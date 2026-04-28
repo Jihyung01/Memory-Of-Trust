@@ -73,15 +73,13 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
         }}
       >
         {/* 소리 보조 버튼 */}
-        <button
-          type="button"
+        <div
           className="flex h-11 w-11 items-center justify-center rounded-full border-2 transition-opacity"
           style={{
             background: "var(--radio-panel)",
             borderColor: "var(--radio-border)",
             opacity: isActive ? 0.4 : 0.7,
           }}
-          tabIndex={-1}
           aria-hidden
         >
           <svg
@@ -95,7 +93,7 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
             <path d="m15.54 8.46a5 5 0 0 1 0 7.07" />
           </svg>
-        </button>
+        </div>
 
         {/* 메인 마이크 버튼 */}
         <div className="relative flex flex-col items-center gap-2">
@@ -173,15 +171,13 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
         </div>
 
         {/* 알림 보조 버튼 */}
-        <button
-          type="button"
+        <div
           className="flex h-11 w-11 items-center justify-center rounded-full border-2 transition-opacity"
           style={{
             background: "var(--radio-panel)",
             borderColor: "var(--radio-border)",
             opacity: isActive ? 0.4 : 0.7,
           }}
-          tabIndex={-1}
           aria-hidden
         >
           <svg
@@ -195,7 +191,7 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-        </button>
+        </div>
       </div>
     </div>
   );

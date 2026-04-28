@@ -36,16 +36,16 @@ claude --version # Claude Code
 |---|---|---|---|
 | T1 | next-app 스캐폴드 + lib + PWA manifest | Codex / gpt-5.5 | ✅ 완료 (수동 + Codex) |
 | T2 | Supabase 스키마 + RLS + seed | (수동 SQL Editor) | ✅ 완료 |
-| **T3** | 디바이스 인증 + 다음 프롬프트 API | **Codex / gpt-5.5** | ⬜ 다음 |
-| 리뷰① | T3 diff 리뷰 (인증 보안) | **Claude Code / opus-4-7** | ⬜ |
-| T4 | 어르신 디바이스 화면 (시계/사진/마이크) | **Codex / gpt-5.5** | ⬜ |
-| 검수② | Elder UX Guardian (어르신 화면 검수) | **Claude Code / opus-4-7** | ⬜ |
-| 설계③ | T5 시작 전 설계 (raw_utterances INSERT 안전성) | **Claude Code / opus-4-7** | ⬜ |
-| T5 | 음성 녹음 + STT + raw_utterances 저장 | **Codex / gpt-5.5** | ⬜ |
-| T6 | LLM 응답 + 클로바 TTS + 자동 재생 | **Codex / gpt-5.5** | ⬜ |
-| T7 | 자녀 대시보드 (로그인 + 발화 목록 + 사진 업로드) | **Codex / gpt-5.5** | ⬜ |
-| 리뷰④ | T7 끝나고 RLS 검증 | **Claude Code / opus-4-7** | ⬜ |
-| T8 | DoD 시나리오 수동 테스트 | (사용자 본인) | ⬜ |
+| T3 | 디바이스 인증 + 다음 프롬프트 API | Codex / gpt-5.5 | ✅ 완료 |
+| 리뷰① | T3 diff 리뷰 (인증 보안) | Claude Code / opus-4-7 | ⬜ 보류 (T7 검수와 묶어 일괄 처리 예정) |
+| T4 | 어르신 디바이스 화면 (시계/사진/마이크) | Codex / gpt-5.5 | ✅ 완료 |
+| 검수② | Elder UX Guardian (어르신 화면 검수) | Claude Code / opus-4-7 | ⬜ Phase 1 Week 1 검수 예정 |
+| 설계③ | T5 시작 전 설계 (raw_utterances INSERT 안전성) | Claude Code / opus-4-7 | ✅ 마스터 문서 §6-4 불변식으로 대체 |
+| T5 | 음성 녹음 + STT + raw_utterances 저장 | Codex / gpt-5.5 | ✅ dev 텍스트 시뮬레이션으로 통과 (마이크는 Phase 1 실태블릿 검증) |
+| T6 | LLM 응답 + OpenAI TTS + audio_url 생성 | Codex / gpt-5.5 | ✅ 완료 (TTS는 OpenAI로 변경, signed URL 200) |
+| T7 | 자녀 대시보드 (로그인 + 발화 목록 + 사진 업로드) | Codex / gpt-5.5 | 🟡 일부 (login 동작, /family/[elderId] 표시·사진 업로드 직접 클릭 검증 남음) |
+| 리뷰④ | T7 끝나고 RLS 검증 | Claude Code / opus-4-7 | ⬜ Phase 1 Week 1 |
+| **T8** | **DoD 시나리오 수동 테스트** | **(사용자 본인)** | 🟡 **마지막 5분 — 아래 §6 참조** |
 
 ---
 
@@ -396,6 +396,41 @@ T7 끝나면 멈추고 보고.
 - [ ] 자녀가 웹 대시보드에서 transcript 열람
 
 이 3개 통과 → **Sprint 0 완료. Phase 1 진입.**
+
+---
+
+## §6. T8 마무리 검증 (마이크/스피커 없는 환경 변형)
+
+원래 DoD를 작업 데스크톱 환경에 맞게 변형. 이 5개만 직접 클릭으로 통과시키면 Sprint 0 종료.
+
+### A. 디바이스 페이지 정상 표시
+- [ ] `http://localhost:3002/device/tab-jihyung-001` 접속
+- [ ] 시계 + 사진 + 한 문장 + 마이크 버튼 4요소만 보임
+- [ ] 콘솔에 401 / NotFoundError 외 에러 없음 (마이크 NotFoundError는 정상 — 데스크톱에 마이크 없음)
+
+### B. dev 발화 시뮬레이션 → 응답 표시
+- [ ] [dev] 패널에 한국어 한 문장 입력 (예: "결혼식 날 너무 떨렸어요")
+- [ ] 전송 후 화면 한 문장 영역에 AI 응답 표시 (예: "그러셨어요...", "어떤 마음이 드셨어요?" 같은 1~2문장)
+
+### C. DB INSERT 확인
+- [ ] Supabase Studio → Table Editor → `raw_utterances`
+- [ ] 새 row 1개 (transcript = 입력한 문장, audio_url = null)
+- [ ] `prompts` 에도 photo_trigger row 1개
+
+### D. TTS audio_url 생성 확인 (재생 X)
+- [ ] DevTools Console 에 `[tts] took <ms>ms` 로그
+- [ ] `/api/tts` 응답에 audio_url (Supabase tts-cache signed URL) 200
+- [ ] (선택) audio_url 클릭 → mp3 다운로드 → 핸드폰에서 재생해 캐릭터 톤 1회 확인
+
+### E. 자녀 대시보드 발화 표시
+- [ ] `http://localhost:3002/family/login` 매직링크 로그인 (메일함 확인)
+- [ ] `http://localhost:3002/family/00000000-0000-0000-0000-000000000001` 접속
+- [ ] 방금 입력한 transcript 가 발화 목록에 표시
+- [ ] `/family/<elderId>/photos` → 사진 업로드 폼 동작 확인
+
+A~E 모두 통과 → **Sprint 0 완료. Phase 1 진입.**
+
+마이크/스피커 본격 검증은 `docs/PHASE1_PLAN.md` Week 2 (실제 7인치 태블릿 셋업) 에서.
 
 ---
 

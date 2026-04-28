@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { isDevMode } from "@/lib/env";
 import { ko } from "@/lib/i18n";
 import { VoiceRecorder } from "@/lib/voice/recorder";
 
@@ -32,6 +33,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
   const [prompt, setPrompt] = useState<NextPromptResponse | null>(null);
   const [phase, setPhase] = useState<ConversationPhase>("idle");
   const [bubbleText, setBubbleText] = useState<string>("");
+  const [devTranscript, setDevTranscript] = useState<string>("");
 
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -74,6 +76,126 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
     };
   }, []);
 
+  const continueAfterTranscript = useCallback(
+    async (input: {
+      transcript: string;
+      durationSec: number;
+      startedAt: string;
+      endedAt: string;
+      audioBlob?: Blob;
+    }) => {
+      setPhase("processing");
+
+      try {
+        const utteranceForm = new FormData();
+        if (input.audioBlob) {
+          utteranceForm.append("audio", input.audioBlob, "recording.webm");
+        }
+        utteranceForm.append(
+          "meta",
+          JSON.stringify({
+            device_token: deviceToken,
+            transcript: input.transcript,
+            audio_duration_sec: input.durationSec,
+            prompt_id: prompt?.prompt_id ?? undefined,
+            source_photo_id: undefined,
+            started_at: input.startedAt,
+            ended_at: input.endedAt,
+          })
+        );
+
+        const utteranceStartedAt = Date.now();
+        const utteranceRes = await fetch("/api/device/utterance", {
+          method: "POST",
+          body: utteranceForm,
+        });
+        console.log(`[device] utterance took ${Date.now() - utteranceStartedAt}ms`);
+
+        if (!utteranceRes.ok) {
+          console.error("Utterance save failed:", utteranceRes.status);
+          setPhase("idle");
+          return;
+        }
+
+        const utteranceData = (await utteranceRes.json()) as {
+          utterance_id?: string;
+          id?: string;
+        };
+        const utteranceId = utteranceData.utterance_id ?? utteranceData.id;
+        if (!utteranceId) {
+          console.error("Utterance response missing id");
+          setPhase("idle");
+          return;
+        }
+
+        const llmStartedAt = Date.now();
+        const llmRes = await fetch("/api/llm/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            utterance_id: utteranceId,
+          }),
+        });
+        console.log(`[device] llm/respond took ${Date.now() - llmStartedAt}ms`);
+
+        if (!llmRes.ok) {
+          console.error("LLM respond failed:", llmRes.status);
+          setPhase("idle");
+          return;
+        }
+
+        const llmData = (await llmRes.json()) as { response_text: string };
+        setBubbleText(llmData.response_text);
+
+        setPhase("speaking");
+
+        const ttsStartedAt = Date.now();
+        const ttsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: llmData.response_text,
+          }),
+        });
+        console.log(`[device] tts took ${Date.now() - ttsStartedAt}ms`);
+
+        if (ttsRes.ok) {
+          const ttsData = (await ttsRes.json()) as { audio_url?: string };
+          if (!ttsData.audio_url) {
+            console.error("TTS response missing audio_url");
+            setPhase("idle");
+            return;
+          }
+
+          console.log("[device] tts audio_url", ttsData.audio_url);
+          const audio = new Audio(ttsData.audio_url);
+          audioRef.current = audio;
+
+          audio.onended = () => {
+            audioRef.current = null;
+            setPhase("idle");
+          };
+          audio.onerror = () => {
+            audioRef.current = null;
+            setPhase("idle");
+          };
+
+          await audio.play().catch(() => {
+            console.log("[device] audio playback skipped", ttsData.audio_url);
+            setPhase("idle");
+          });
+        } else {
+          console.error("TTS failed:", ttsRes.status);
+          setPhase("idle");
+        }
+      } catch (error) {
+        console.error("Conversation processing error:", error);
+        setPhase("idle");
+      }
+    },
+    [deviceToken, prompt]
+  );
+
   const processConversation = useCallback(
     async (audioBlob: Blob, durationSec: number) => {
       setPhase("processing");
@@ -106,90 +228,37 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
           return;
         }
 
-        const utteranceForm = new FormData();
-        utteranceForm.append("audio", audioBlob, "recording.webm");
-        utteranceForm.append(
-          "meta",
-          JSON.stringify({
-            device_token: deviceToken,
-            transcript: sttData.transcript,
-            audio_duration_sec: durationSec,
-            prompt_id: prompt?.prompt_id ?? undefined,
-            source_photo_id: undefined,
-            started_at: startedAtRef.current,
-            ended_at: endedAt,
-          })
-        );
-
-        const savePromise = fetch("/api/device/utterance", {
-          method: "POST",
-          body: utteranceForm,
-        }).catch((err) => console.error("Utterance save failed:", err));
-
-        const llmRes = await fetch("/api/llm/respond", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            device_token: deviceToken,
-            transcript: sttData.transcript,
-            prompt_text: prompt?.prompt_text ?? undefined,
-          }),
+        await continueAfterTranscript({
+          transcript: sttData.transcript,
+          durationSec,
+          startedAt: startedAtRef.current,
+          endedAt,
+          audioBlob,
         });
-
-        await savePromise;
-
-        if (!llmRes.ok) {
-          console.error("LLM respond failed:", llmRes.status);
-          setPhase("idle");
-          return;
-        }
-
-        const llmData = (await llmRes.json()) as { response_text: string };
-        setBubbleText(llmData.response_text);
-
-        setPhase("speaking");
-
-        const ttsRes = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            device_token: deviceToken,
-            text: llmData.response_text,
-          }),
-        });
-
-        if (ttsRes.ok) {
-          const mp3Blob = await ttsRes.blob();
-          const audioUrl = URL.createObjectURL(mp3Blob);
-          const audio = new Audio(audioUrl);
-          audioRef.current = audio;
-
-          audio.onended = () => {
-            URL.revokeObjectURL(audioUrl);
-            audioRef.current = null;
-            setPhase("idle");
-          };
-          audio.onerror = () => {
-            URL.revokeObjectURL(audioUrl);
-            audioRef.current = null;
-            setPhase("idle");
-          };
-
-          await audio.play().catch(() => {
-            URL.revokeObjectURL(audioUrl);
-            setPhase("idle");
-          });
-        } else {
-          console.error("TTS failed:", ttsRes.status);
-          setPhase("idle");
-        }
       } catch (error) {
         console.error("Conversation processing error:", error);
         setPhase("idle");
       }
     },
-    [deviceToken, prompt]
+    [continueAfterTranscript, deviceToken]
   );
+
+  const handleDevSubmit = useCallback(async () => {
+    const transcript = devTranscript.trim();
+    if (!isDevMode || !transcript || phase === "processing" || phase === "speaking") {
+      return;
+    }
+
+    const startedAt = new Date().toISOString();
+    const endedAt = new Date().toISOString();
+    setDevTranscript("");
+    await continueAfterTranscript({
+      transcript,
+      durationSec: 0,
+      startedAt,
+      endedAt,
+    });
+  }, [continueAfterTranscript, devTranscript, phase]);
 
   const handleMicPress = useCallback(async () => {
     if (phase === "processing" || phase === "speaking") return;
@@ -312,6 +381,32 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
           isProcessing={phase === "processing" || phase === "speaking"}
           onPress={handleMicPress}
         />
+        {isDevMode ? (
+          <form
+            className="fixed bottom-3 right-3 flex w-72 max-w-[calc(100vw-1.5rem)] flex-col gap-2 rounded border border-neutral-400 bg-neutral-100 p-3 text-xs opacity-50 shadow-sm"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleDevSubmit();
+            }}
+          >
+            <label className="text-neutral-700" htmlFor="dev-transcript">
+              [dev] 발화 시뮬레이션
+            </label>
+            <textarea
+              id="dev-transcript"
+              className="min-h-16 resize-none rounded border border-neutral-300 bg-white p-2 text-sm text-neutral-900"
+              value={devTranscript}
+              onChange={(event) => setDevTranscript(event.target.value)}
+            />
+            <button
+              type="submit"
+              className="rounded border border-neutral-500 px-3 py-2 text-neutral-800 disabled:opacity-40"
+              disabled={!devTranscript.trim() || phase === "processing" || phase === "speaking"}
+            >
+              [dev] 발화 전송
+            </button>
+          </form>
+        ) : null}
       </div>
     </main>
   );
