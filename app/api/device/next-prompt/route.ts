@@ -53,34 +53,38 @@ export async function GET(request: Request) {
       return Response.json({ error: "Elder not found" }, { status: 404 });
     }
 
-    if (!photo) {
-      return Response.json({ error: "Active photo not found" }, { status: 404 });
-    }
-
+    // 사진이 없어도 기본 프롬프트로 동작
     const promptText = await generateText(
       photoTriggerPrompt({
         elderDisplayName: elder.display_name ?? elder.name,
-        photoCaption: photo.caption ?? undefined,
-        photoYear: photo.approximate_year ?? undefined,
-        peopleInPhoto: photo.people_in_photo ?? undefined,
+        photoCaption: photo?.caption ?? undefined,
+        photoYear: photo?.approximate_year ?? undefined,
+        peopleInPhoto: photo?.people_in_photo ?? undefined,
       })
     );
 
-    const [prompt, photoUrl] = await Promise.all([
-      createPhotoPrompt({
-        elderId: device.elder_id,
-        promptText,
-        photoId: photo.id,
-      }),
-      createPhotoSignedUrl(photo.storage_path),
-    ]);
+    const prompt = await createPhotoPrompt({
+      elderId: device.elder_id,
+      promptText,
+      photoId: photo?.id ?? null,
+    });
+
+    // 사진 signed URL — Storage에 파일이 없어도 에러 안 남
+    let photoUrl: string | null = null;
+    if (photo) {
+      try {
+        photoUrl = await createPhotoSignedUrl(photo.storage_path);
+      } catch (err) {
+        console.warn("Photo signed URL failed (non-fatal):", err);
+      }
+    }
 
     return Response.json({
       prompt_id: prompt.id,
       prompt_type: "photo_trigger",
       prompt_text: promptText,
       photo_url: photoUrl,
-      photo_caption: photo.caption,
+      photo_caption: photo?.caption ?? null,
     });
   } catch (error) {
     console.error("GET /api/device/next-prompt error:", error);

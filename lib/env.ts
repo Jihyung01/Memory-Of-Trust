@@ -22,22 +22,31 @@ const serverSchema = z.object({
   OPENAI_BATCH_MODEL: z.string().default("gpt-4o"),
   OPENAI_STT_MODEL: z.string().default("whisper-1"),
 
-  // 네이버 클로바보이스
-  NAVER_CLOVA_VOICE_CLIENT_ID: z.string().min(1),
-  NAVER_CLOVA_VOICE_CLIENT_SECRET: z.string().min(1),
+  // 네이버 클로바보이스 (현재 미사용 — OpenAI TTS로 전환. 추후 복원 가능)
+  NAVER_CLOVA_VOICE_CLIENT_ID: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  NAVER_CLOVA_VOICE_CLIENT_SECRET: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   NAVER_CLOVA_VOICE_VOICE_ID: z.string().default("vara"),
 
   // 카카오 알림톡 (Phase 1.5+, optional in dev)
-  KAKAO_ALIMTALK_API_KEY: z.string().optional(),
-  KAKAO_ALIMTALK_SENDER_KEY: z.string().optional(),
+  KAKAO_ALIMTALK_API_KEY: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  KAKAO_ALIMTALK_SENDER_KEY: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
 
   // 토스페이먼츠 (Phase 2+, optional in dev)
-  TOSS_PAYMENTS_CLIENT_KEY: z.string().optional(),
-  TOSS_PAYMENTS_SECRET_KEY: z.string().optional(),
+  TOSS_PAYMENTS_CLIENT_KEY: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  TOSS_PAYMENTS_SECRET_KEY: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
 
   // Cogno (Phase 2+, optional in dev)
-  COGNO_BASE_URL: z.string().url().optional(),
-  COGNO_API_KEY: z.string().optional(),
+  // 빈 문자열("")도 허용 — .env.local에 값 없이 선언만 된 경우
+  COGNO_BASE_URL: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  COGNO_API_KEY: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   COGNO_MODEL: z.string().default("qwen3.6:35b"),
 
   // 인증/Cron

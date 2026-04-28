@@ -113,7 +113,7 @@ export async function fetchLeastShownActivePhoto(
 export async function createPhotoPrompt(input: {
   elderId: string;
   promptText: string;
-  photoId: string;
+  photoId: string | null;
 }): Promise<PromptRecord> {
   const db = getSupabaseServiceClient();
   const { data, error } = await db
@@ -146,4 +146,75 @@ export async function createPhotoSignedUrl(storagePath: string): Promise<string>
   }
 
   return data.signedUrl;
+}
+
+// ============================================================
+// T5: 음성 녹음 + raw_utterances
+// ============================================================
+
+export interface RawUtteranceRecord {
+  id: string;
+}
+
+/**
+ * 음성 파일을 Supabase Storage 'utterances' 버킷에 업로드.
+ * 반환값: storage_path (signed URL 아님 — 나중에 signed URL 생성 시 사용)
+ */
+export async function uploadAudioToStorage(
+  file: File,
+  storagePath: string
+): Promise<string> {
+  const db = getSupabaseServiceClient();
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const { error } = await db.storage
+    .from("utterances")
+    .upload(storagePath, buffer, {
+      contentType: file.type || "audio/webm",
+      upsert: false, // 중복 방지
+    });
+
+  if (error) {
+    throw new Error(`[supabase] Failed to upload audio: ${error.message}`);
+  }
+
+  return storagePath;
+}
+
+/**
+ * raw_utterances INSERT (immutable — 이 함수에서 UPDATE/DELETE 절대 금지)
+ */
+export async function insertRawUtterance(input: {
+  elderId: string;
+  promptId: string | null;
+  sourcePhotoId: string | null;
+  audioUrl: string | null;
+  audioDurationSec: number;
+  transcript: string;
+  startedAt: string;
+  endedAt: string;
+}): Promise<RawUtteranceRecord> {
+  const db = getSupabaseServiceClient();
+  const { data, error } = await db
+    .from("raw_utterances")
+    .insert({
+      elder_id: input.elderId,
+      prompt_id: input.promptId,
+      source_photo_id: input.sourcePhotoId,
+      audio_url: input.audioUrl,
+      audio_duration_sec: input.audioDurationSec,
+      transcript: input.transcript,
+      started_at: input.startedAt,
+      ended_at: input.endedAt,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(`[supabase] Failed to insert raw_utterance: ${error.message}`);
+  }
+
+  return data as RawUtteranceRecord;
 }

@@ -1,8 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #e8e8f0;
+  --background: #1c1c1e;
+  --foreground: #e8e6e2;
+
+  /* 레트로 라디오 팔레트 — 회색 톤 */
+  --radio-body: #2a2a2d;
+  --radio-panel: #222225;
+  --radio-bezel: #3a3a3e;
+  --radio-border: #4a4a4e;
+  --radio-accent: #ffb43c;
+  --radio-accent-dim: rgba(255, 180, 60, 0.15);
+  --radio-accent-glow: rgba(255, 180, 60, 0.4);
+  --radio-text: #e0ddd8;
+  --radio-text-dim: #8a8880;
+  --radio-dot: rgba(160, 155, 145, 0.2);
+  --radio-rec: #ff6a3c;
+  --radio-rec-glow: rgba(255, 100, 60, 0.5);
 }
 
 @theme inline {
@@ -17,7 +31,7 @@
 }
 
 body {
-  background: #000000;
+  background: var(--background);
   color: var(--foreground);
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
@@ -25,8 +39,43 @@ body {
   user-select: none;
 }
 
-/* Next.js dev overlay root — 브라우저에서 left/top 인라인 제거와 동일한 효과 (개발 시에만 존재) */
+/* 레트로 라디오 애니메이션 */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--radio-accent-glow); }
+  50% { box-shadow: 0 0 24px var(--radio-accent-glow); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes mic-glow {
+  0%, 100% { box-shadow: 0 0 12px var(--radio-rec-glow); }
+  50% { box-shadow: 0 0 32px var(--radio-rec-glow); }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes bar-bounce {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Next.js dev overlay */
 nextjs-portal {
-  left: unset;
-  top: unset;
+  display: none;
 }

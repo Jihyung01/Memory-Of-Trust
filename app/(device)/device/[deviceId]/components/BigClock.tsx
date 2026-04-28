@@ -4,12 +4,8 @@ import { useEffect, useState } from "react";
 
 function formatClock(date: Date | null) {
   if (!date) {
-    return {
-      time: "--:--",
-      date: "",
-    };
+    return { time: "--:--", date: "" };
   }
-
   return {
     time: date.toLocaleTimeString("ko-KR", {
       hour: "2-digit",
@@ -31,19 +27,32 @@ export function BigClock() {
   useEffect(() => {
     setNow(new Date());
     const timer = window.setInterval(() => setNow(new Date()), 1000);
-
     return () => window.clearInterval(timer);
   }, []);
 
   return (
-    <div className="w-full max-w-80 rounded-lg border border-amber-200 bg-stone-100 px-6 py-5 shadow-sm">
+    <div
+      className="rounded-xl border-2 px-8 py-4 text-center"
+      style={{
+        background: "var(--radio-panel)",
+        borderColor: "var(--radio-border)",
+        boxShadow: "inset 0 1px 4px rgba(0,0,0,0.3)",
+      }}
+    >
       <time
-        className="block text-center text-6xl font-semibold leading-none tracking-normal text-stone-800 sm:text-7xl lg:text-8xl"
+        className="block text-6xl font-medium leading-none tracking-widest sm:text-7xl"
         dateTime={now?.toISOString()}
+        style={{
+          color: "var(--radio-accent)",
+          textShadow: "0 0 12px var(--radio-accent-glow)",
+        }}
       >
         {clock.time}
       </time>
-      <p className="mt-4 text-center text-3xl font-medium leading-tight text-stone-600">
+      <p
+        className="mt-2 text-xl leading-tight"
+        style={{ color: "var(--radio-text-dim)" }}
+      >
         {clock.date}
       </p>
     </div>

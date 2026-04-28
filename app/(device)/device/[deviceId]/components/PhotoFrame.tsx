@@ -5,10 +5,15 @@ interface PhotoFrameProps {
 
 export function PhotoFrame({ photoUrl, caption }: PhotoFrameProps) {
   return (
-    <div className="flex w-full max-w-5xl items-center justify-center rounded-lg border border-amber-200 bg-stone-100 p-3 shadow-md">
-      <div className="aspect-[4/3] w-full overflow-hidden rounded-md bg-amber-100">
+    <div
+      className="w-full max-w-md overflow-hidden rounded-xl border-2"
+      style={{
+        background: "var(--radio-panel)",
+        borderColor: "var(--radio-border)",
+      }}
+    >
+      <div className="aspect-[4/3] w-full overflow-hidden">
         {photoUrl ? (
-          // Signed Supabase URLs are rendered as plain images to avoid widening Next image config in T4.
           <img
             alt={caption ?? ""}
             className="h-full w-full object-contain"
@@ -16,9 +21,31 @@ export function PhotoFrame({ photoUrl, caption }: PhotoFrameProps) {
             src={photoUrl}
           />
         ) : (
-          <div className="h-full w-full bg-[radial-gradient(circle_at_center,#fef3c7,#e7e5e4)]" />
+          <div
+            className="flex h-full w-full flex-col items-center justify-center gap-2"
+            style={{ background: "var(--radio-body)" }}
+          >
+            <span className="text-4xl opacity-25">📷</span>
+            <span
+              className="text-sm"
+              style={{ color: "var(--radio-text-dim)" }}
+            >
+              사진이 곧 나타납니다
+            </span>
+          </div>
         )}
       </div>
+      {caption && (
+        <div
+          className="border-t px-4 py-2 text-center text-base"
+          style={{
+            borderColor: "var(--radio-border)",
+            color: "var(--radio-text-dim)",
+          }}
+        >
+          {caption}
+        </div>
+      )}
     </div>
   );
 }
