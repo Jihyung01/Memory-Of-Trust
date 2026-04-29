@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { synthesizeSpeech } from "@/lib/ai/openai-tts";
+import { synthesizeSpeechEdge } from "@/lib/ai/edge-tts";
 import { uploadTtsAudioAndCreateSignedUrl } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,9 @@ export async function POST(request: Request) {
       return Response.json({ error: "text must be 1-1000 characters" }, { status: 400 });
     }
 
-    const mp3Buffer = await synthesizeSpeech({
+    const mp3Buffer = await synthesizeSpeechEdge({
       text,
-      speed: 0.85,
+      rate: "-15%",
     });
 
     const audioUrl = await uploadTtsAudioAndCreateSignedUrl({

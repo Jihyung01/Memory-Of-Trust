@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 
-import { generateText, OpenAIAuthError } from "@/lib/ai/openai";
+import { generateTextGemini } from "@/lib/ai/gemini";
 import { photoTriggerPrompt } from "@/lib/ai/prompts";
 import { env } from "@/lib/env";
 import {
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     console.log("[next-prompt] generateText start");
 
     try {
-      promptText = await generateText({
+      promptText = await generateTextGemini({
         prompt: photoTriggerPrompt({
           elderDisplayName: elder.display_name ?? elder.name,
           photoCaption: photo?.caption ?? undefined,
@@ -92,24 +92,10 @@ export async function GET(request: Request) {
         timeoutMs: NEXT_PROMPT_TIMEOUT_MS,
       });
     } catch (error) {
-      if (error instanceof OpenAIAuthError) {
-        console.error("OpenAI auth failed in next-prompt:", error);
-        if (env.NODE_ENV !== "production") {
-          return Response.json(
-            {
-              error: "OpenAI auth failed",
-              hint: "check OPENAI_API_KEY in .env.local",
-            },
-            { status: 401 }
-          );
-        }
-        return Response.json({ error: "Internal server error" }, { status: 500 });
-      }
-
       if (isTimeoutError(error)) {
-        console.warn("[next-prompt] generateText timed out; using fallback prompt");
+        console.warn("[next-prompt] Gemini timed out; using fallback prompt");
       } else {
-        console.warn("[next-prompt] generateText failed; using fallback prompt", error);
+        console.warn("[next-prompt] Gemini failed; using fallback prompt", error);
       }
     } finally {
       console.log(`[next-prompt] generateText took ${Date.now() - llmStartedAt}ms`);

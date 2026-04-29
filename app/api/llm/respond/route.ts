@@ -1,4 +1,4 @@
-import { generateText } from "@/lib/ai/openai";
+import { generateTextGemini } from "@/lib/ai/gemini";
 import { ELDER_CHARACTER_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import { fetchRawUtteranceForResponse } from "@/lib/supabase/server";
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "utterance_id or transcript is required" }, { status: 400 });
     }
 
-    const responseText = await generateText({
+    const responseText = await generateTextGemini({
       systemPrompt: [
         ELDER_CHARACTER_SYSTEM_PROMPT,
         "대화를 자연스럽게 마무리할 때는 응답 마지막에 [END] 태그를 붙인다.",

@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/extract",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-card",
+      "schedule": "0 1 * * 1"
+    },
+    {
+      "path": "/api/cron/monthly-chapter",
+      "schedule": "0 2 1 * *"
+    }
+  ]
+}

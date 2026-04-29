@@ -171,31 +171,54 @@ JSON 형식으로 답하세요:
 
 export interface WeeklyCardParams {
   elderDisplayName: string;
-  weekStart: string;
-  weekEnd: string;
-  utterances: Array<{ transcript: string; date: string; emotion?: string }>;
-  unresolvedItems: Array<{ excerpt: string; type: string }>;
+  weekLabel: string;
+  timelineEvents: Array<{ title: string; description?: string | null }>;
+  themes: Array<{ theme: string; weight?: number }>;
+  unresolvedOpen: Array<{ excerpt: string; type: string }>;
+  sensoryDetails: Array<{ sense: string; detail: string }>;
+  entitiesTop: Array<{ name: string; relation?: string | null; emotional_tone?: string | null }>;
 }
 
 export function weeklyCardPrompt(p: WeeklyCardParams): string {
-  const utterancesBlock = p.utterances
-    .map((u, i) => `${i + 1}. [${u.date}] ${u.transcript}`)
-    .join("\n");
+  const eventsBlock = p.timelineEvents.length
+    ? p.timelineEvents.map((e, i) => `${i + 1}. ${e.title}${e.description ? ` — ${e.description}` : ""}`).join("\n")
+    : "- (없음)";
 
-  const unresolvedBlock = p.unresolvedItems.length
-    ? p.unresolvedItems.map((u) => `- (${u.type}) ${u.excerpt}`).join("\n")
+  const themesBlock = p.themes.length
+    ? p.themes.map((t) => `- ${t.theme}${t.weight ? ` (가중치 ${t.weight})` : ""}`).join("\n")
+    : "- (없음)";
+
+  const unresolvedBlock = p.unresolvedOpen.length
+    ? p.unresolvedOpen.map((u) => `- (${u.type}) ${u.excerpt}`).join("\n")
+    : "- (없음)";
+
+  const sensoryBlock = p.sensoryDetails.length
+    ? p.sensoryDetails.map((s) => `- [${s.sense}] ${s.detail}`).join("\n")
+    : "- (없음)";
+
+  const entitiesBlock = p.entitiesTop.length
+    ? p.entitiesTop.map((e) => `- ${e.name}${e.relation ? ` (${e.relation})` : ""}${e.emotional_tone ? ` — ${e.emotional_tone}` : ""}`).join("\n")
     : "- (없음)";
 
   return `
 이번 주 ${p.elderDisplayName}이 들려주신 이야기를 가족에게 전달할 카드를 만드세요.
 
-기간: ${p.weekStart} ~ ${p.weekEnd}
+기간: ${p.weekLabel}
 
-발화들:
-${utterancesBlock}
+주요 사건:
+${eventsBlock}
 
-미해결로 분류된 항목:
+이번 주 주제:
+${themesBlock}
+
+미해결 항목:
 ${unresolvedBlock}
+
+감각 디테일:
+${sensoryBlock}
+
+자주 등장한 인물:
+${entitiesBlock}
 
 다음 형식(Markdown)으로 카드를 만드세요:
 
@@ -229,25 +252,45 @@ ${unresolvedBlock}
 export interface MonthlyChapterParams {
   elderDisplayName: string;
   monthLabel: string; // "2026년 4월"
-  utterances: Array<{ transcript: string; date: string; emotion?: string }>;
-  themes: Array<{ theme: string; weight: number }>;
-  entities: Array<{ name: string; emotional_tone?: string }>;
+  timelineEvents: Array<{ title: string; approximate_year?: number | null; description?: string | null }>;
+  themes: Array<{ theme: string; weight?: number }>;
+  entitiesTop: Array<{ name: string; relation?: string | null; emotional_tone?: string | null }>;
+  memoryCandidates: Array<{ fact: string; confidence: number }>;
 }
 
 export function monthlyChapterPrompt(p: MonthlyChapterParams): string {
+  const eventsBlock = p.timelineEvents.length
+    ? p.timelineEvents.map((e, i) => `${i + 1}. ${e.title}${e.approximate_year ? ` (${e.approximate_year}년경)` : ""}${e.description ? ` — ${e.description}` : ""}`).join("\n")
+    : "- (없음)";
+
+  const themesBlock = p.themes.length
+    ? p.themes.map((t) => `- ${t.theme}${t.weight ? ` (가중치 ${t.weight})` : ""}`).join("\n")
+    : "- (없음)";
+
+  const entitiesBlock = p.entitiesTop.length
+    ? p.entitiesTop.map((e) => `- ${e.name}${e.relation ? ` (${e.relation})` : ""}${e.emotional_tone ? ` — ${e.emotional_tone}` : ""}`).join("\n")
+    : "- (없음)";
+
+  const memoriesBlock = p.memoryCandidates.length
+    ? p.memoryCandidates.map((m) => `- ${m.fact} (확신도 ${m.confidence})`).join("\n")
+    : "- (없음)";
+
   return `
 이 달 ${p.elderDisplayName}이 들려주신 이야기로 자서전 챕터를 만드세요.
 
 기간: ${p.monthLabel}
 
-발화들:
-${p.utterances.map((u, i) => `${i + 1}. [${u.date}] ${u.transcript}`).join("\n")}
+주요 사건:
+${eventsBlock}
 
 이번 달 주된 주제:
-${p.themes.map((t) => `- ${t.theme} (가중치 ${t.weight})`).join("\n")}
+${themesBlock}
 
 자주 등장한 인물:
-${p.entities.map((e) => `- ${e.name}${e.emotional_tone ? ` (${e.emotional_tone})` : ""}`).join("\n")}
+${entitiesBlock}
+
+기억 후보:
+${memoriesBlock}
 
 다음 형식(Markdown)으로 챕터를 만드세요:
 

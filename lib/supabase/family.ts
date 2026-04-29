@@ -105,6 +105,58 @@ export async function uploadFamilyPhoto(input: {
   return input.storagePath;
 }
 
+// ============================================================
+// S1-T4: 주간 카드 / 월간 챕터 조회
+// ============================================================
+
+export interface StoryOutputRecord {
+  id: string;
+  output_type: string;
+  title: string;
+  content: string;
+  created_at: string;
+}
+
+export async function fetchWeeklyCards(
+  db: SupabaseClient,
+  elderId: string,
+  limit: number = 10
+): Promise<StoryOutputRecord[]> {
+  const { data, error } = await db
+    .from("story_outputs")
+    .select("id, output_type, title, content, created_at")
+    .eq("elder_id", elderId)
+    .eq("output_type", "weekly_card")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`[supabase] Failed to fetch weekly cards: ${error.message}`);
+  }
+
+  return (data ?? []) as StoryOutputRecord[];
+}
+
+export async function fetchMonthlyChapters(
+  db: SupabaseClient,
+  elderId: string,
+  limit: number = 10
+): Promise<StoryOutputRecord[]> {
+  const { data, error } = await db
+    .from("story_outputs")
+    .select("id, output_type, title, content, created_at")
+    .eq("elder_id", elderId)
+    .eq("output_type", "monthly_chapter")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`[supabase] Failed to fetch monthly chapters: ${error.message}`);
+  }
+
+  return (data ?? []) as StoryOutputRecord[];
+}
+
 export async function insertFamilyPhoto(input: {
   db: SupabaseClient;
   elderId: string;

@@ -5,7 +5,7 @@
  * 컴포넌트/route handler 에서 process.env.* 직접 접근 금지.
  *
  *   import { env } from "@/lib/env";
- *   env.OPENAI_API_KEY
+ *   env.GEMINI_API_KEY
  */
 
 import { z } from "zod";
@@ -16,11 +16,19 @@ const serverSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
 
-  // OpenAI
-  OPENAI_API_KEY: z.string().min(20),
+  // OpenAI (폴백용, optional)
+  OPENAI_API_KEY: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().min(20).optional()),
   OPENAI_RESPONSE_MODEL: z.string().default("gpt-4o-mini"),
   OPENAI_BATCH_MODEL: z.string().default("gpt-4o"),
   OPENAI_STT_MODEL: z.string().default("whisper-1"),
+
+  // Gemini (LLM 대화 + 추출 — 무료 티어)
+  GEMINI_API_KEY: z.string().min(10),
+  GEMINI_MODEL: z.string().default("gemini-2.0-flash"),
+
+  // Groq (STT Whisper — 무료 티어)
+  GROQ_API_KEY: z.string().min(10),
 
   // 카카오 알림톡 (Phase 1.5+, optional in dev)
   KAKAO_ALIMTALK_API_KEY: z
@@ -35,7 +43,6 @@ const serverSchema = z.object({
     .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
 
   // Cogno (Phase 2+, optional in dev)
-  // 빈 문자열("")도 허용 — .env.local에 값 없이 선언만 된 경우
   COGNO_BASE_URL: z
     .preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
   COGNO_API_KEY: z
@@ -67,7 +74,6 @@ function loadServer(): ServerEnv {
   if (cached) return cached;
   const parsed = serverSchema.safeParse(process.env);
   if (!parsed.success) {
-    // 보안: 키 값을 출력하지 않는다. 어떤 키가 빠졌는지만 노출.
     const missing = parsed.error.issues.map((i) => i.path.join(".")).join(", ");
     throw new Error(
       `[env] Invalid or missing environment variables: ${missing}. See .env.example.`
@@ -78,12 +84,11 @@ function loadServer(): ServerEnv {
 }
 
 /**
- * 서버 환경 변수. 서버 코드(`app/api/*`, Server Actions, Server Components)에서만 사용.
+ * 서버 환경 변수. 서버 코드에서만 사용.
  */
 export const env: ServerEnv = new Proxy({} as ServerEnv, {
   get(_, key: string) {
     if (typeof window !== "undefined") {
-      // 클라이언트에서 server env 접근 시 NEXT_PUBLIC_* 만 허용
       if (!key.startsWith("NEXT_PUBLIC_")) {
         throw new Error(
           `[env] '${key}' is server-only. Use clientEnv on the browser.`

@@ -10,6 +10,7 @@ import { BigClock } from "./BigClock";
 import { MicButton } from "./MicButton";
 import { PhotoFrame } from "./PhotoFrame";
 import { PromptBubble } from "./PromptBubble";
+import { VuMeter } from "./VuMeter";
 
 interface DevicePageClientProps {
   deviceToken: string;
@@ -387,6 +388,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
         <BigClock />
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
+          <VuMeter active={phase === "recording" || phase === "speaking"} />
           <PhotoFrame
             caption={prompt?.photo_caption ?? null}
             photoUrl={prompt?.photo_url ?? null}
