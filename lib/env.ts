@@ -22,13 +22,6 @@ const serverSchema = z.object({
   OPENAI_BATCH_MODEL: z.string().default("gpt-4o"),
   OPENAI_STT_MODEL: z.string().default("whisper-1"),
 
-  // 네이버 클로바보이스 (현재 미사용 — OpenAI TTS로 전환. 추후 복원 가능)
-  NAVER_CLOVA_VOICE_CLIENT_ID: z
-    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
-  NAVER_CLOVA_VOICE_CLIENT_SECRET: z
-    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
-  NAVER_CLOVA_VOICE_VOICE_ID: z.string().default("vara"),
-
   // 카카오 알림톡 (Phase 1.5+, optional in dev)
   KAKAO_ALIMTALK_API_KEY: z
     .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
@@ -55,6 +48,7 @@ const serverSchema = z.object({
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  ENABLE_DEV_PAGE: z.string().default("false"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

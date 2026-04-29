@@ -34,10 +34,12 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
   const [phase, setPhase] = useState<ConversationPhase>("idle");
   const [bubbleText, setBubbleText] = useState<string>("");
   const [devTranscript, setDevTranscript] = useState<string>("");
+  const [turnCount, setTurnCount] = useState(0);
 
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startedAtRef = useRef<string>("");
+  const processConversationRef = useRef<(blob: Blob, dur: number) => void>(() => {});
 
   // 다음 프롬프트 가져오기
   useEffect(() => {
@@ -74,6 +76,37 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
     return () => {
       recorderRef.current?.dispose();
     };
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      if (!recorderRef.current) {
+        recorderRef.current = new VoiceRecorder();
+      }
+      startedAtRef.current = new Date().toISOString();
+
+      await recorderRef.current.start({
+        silenceThreshold: 15,
+        silenceDurationMs: 4000,
+        maxDurationMs: 60000,
+        onAutoStop: async () => {
+          try {
+            const result = await recorderRef.current?.stop();
+            if (result && result.durationSec >= 0.5) {
+              processConversationRef.current(result.blob, result.durationSec);
+            } else {
+              setPhase("idle");
+            }
+          } catch {
+            setPhase("idle");
+          }
+        },
+      });
+      setPhase("recording");
+    } catch (error) {
+      console.error("Mic start failed:", error);
+      setPhase("idle");
+    }
   }, []);
 
   const continueAfterTranscript = useCallback(
@@ -134,6 +167,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             utterance_id: utteranceId,
+            turn_count: turnCount + 1,
           }),
         });
         console.log(`[device] llm/respond took ${Date.now() - llmStartedAt}ms`);
@@ -144,8 +178,12 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
           return;
         }
 
-        const llmData = (await llmRes.json()) as { response_text: string };
+        const llmData = (await llmRes.json()) as {
+          response_text: string;
+          should_end?: boolean;
+        };
         setBubbleText(llmData.response_text);
+        setTurnCount((prev) => prev + 1);
 
         setPhase("speaking");
 
@@ -173,7 +211,13 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
 
           audio.onended = () => {
             audioRef.current = null;
-            setPhase("idle");
+            if (llmData.should_end) {
+              setTurnCount(0);
+              setPhase("idle");
+              return;
+            }
+
+            startRecording();
           };
           audio.onerror = () => {
             audioRef.current = null;
@@ -182,10 +226,16 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
 
           await audio.play().catch(() => {
             console.log("[device] audio playback skipped", ttsData.audio_url);
+            if (llmData.should_end) {
+              setTurnCount(0);
+            }
             setPhase("idle");
           });
         } else {
           console.error("TTS failed:", ttsRes.status);
+          if (llmData.should_end) {
+            setTurnCount(0);
+          }
           setPhase("idle");
         }
       } catch (error) {
@@ -193,7 +243,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
         setPhase("idle");
       }
     },
-    [deviceToken, prompt]
+    [deviceToken, prompt, startRecording, turnCount]
   );
 
   const processConversation = useCallback(
@@ -243,6 +293,10 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
     [continueAfterTranscript, deviceToken]
   );
 
+  useEffect(() => {
+    processConversationRef.current = processConversation;
+  }, [processConversation]);
+
   const handleDevSubmit = useCallback(async () => {
     const transcript = devTranscript.trim();
     if (!isDevMode || !transcript || phase === "processing" || phase === "speaking") {
@@ -275,36 +329,9 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
         setPhase("idle");
       }
     } else {
-      try {
-        if (!recorderRef.current) {
-          recorderRef.current = new VoiceRecorder();
-        }
-        startedAtRef.current = new Date().toISOString();
-
-        await recorderRef.current.start({
-          silenceThreshold: 15,
-          silenceDurationMs: 4000,
-          maxDurationMs: 60000,
-          onAutoStop: async () => {
-            try {
-              const result = await recorderRef.current?.stop();
-              if (result && result.durationSec >= 0.5) {
-                processConversation(result.blob, result.durationSec);
-              } else {
-                setPhase("idle");
-              }
-            } catch {
-              setPhase("idle");
-            }
-          },
-        });
-        setPhase("recording");
-      } catch (error) {
-        console.error("Mic start failed:", error);
-        setPhase("idle");
-      }
+      await startRecording();
     }
-  }, [phase, processConversation]);
+  }, [phase, processConversation, startRecording]);
 
   return (
     <main
