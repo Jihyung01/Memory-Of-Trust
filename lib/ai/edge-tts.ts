@@ -9,20 +9,47 @@
  *   - ko-KR-InJoonNeural (남성)
  *   - ko-KR-HyunsuNeural (남성, 자연스러움)
  *
- * ⚠️ 비공식 API — MS가 차단할 수 있음. 장애 시 OpenAI TTS 폴백 고려.
+ * ⚠️ 비공식 API — MS가 차단할 수 있음.
+ *    2026-04 기준: Sec-MS-GEC DRM 토큰 + MUID 쿠키 필요.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-const EDGE_TTS_ENDPOINT =
-  "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
 const TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+const CHROMIUM_FULL_VERSION = "143.0.3650.75";
+const SEC_MS_GEC_VERSION = `1-${CHROMIUM_FULL_VERSION}`;
+
+const WSS_BASE =
+  "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
+
+// Windows epoch offset (seconds between 1601-01-01 and 1970-01-01)
+const WIN_EPOCH = 11644473600;
 
 export interface EdgeTTSOptions {
   text: string;
   voice?: string;
   rate?: string;
   pitch?: string;
+}
+
+/**
+ * Sec-MS-GEC 토큰 생성.
+ * 현재 시간을 Windows file time으로 변환, 5분 단위로 내림,
+ * TRUSTED_CLIENT_TOKEN과 합쳐서 SHA-256 해시.
+ */
+function generateSecMsGec(): string {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const windowsTimeSec = nowSec + WIN_EPOCH;
+  // 5분(300초) 단위로 내림
+  const roundedSec = windowsTimeSec - (windowsTimeSec % 300);
+  // 100나노초 단위로 변환 (Windows FILETIME)
+  const ticks = BigInt(roundedSec) * BigInt(10_000_000);
+  const input = `${ticks}${TRUSTED_CLIENT_TOKEN}`;
+  return createHash("sha256").update(input, "utf8").digest("hex").toUpperCase();
+}
+
+function generateMuid(): string {
+  return randomBytes(16).toString("hex").toUpperCase();
 }
 
 function buildSSML(options: EdgeTTSOptions): string {
@@ -62,8 +89,15 @@ export async function synthesizeSpeechEdge(
 
   const ssml = buildSSML(options);
   const requestId = randomUUID().replace(/-/g, "");
+  const secMsGec = generateSecMsGec();
+  const muid = generateMuid();
 
-  const wsUrl = `${EDGE_TTS_ENDPOINT}?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}&ConnectionId=${requestId}`;
+  const wsUrl = [
+    `${WSS_BASE}?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}`,
+    `&ConnectionId=${requestId}`,
+    `&Sec-MS-GEC=${secMsGec}`,
+    `&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}`,
+  ].join("");
 
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -92,9 +126,12 @@ export async function synthesizeSpeechEdge(
 
     const ws = new WebSocketClass(wsUrl, {
       headers: {
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        Cookie: `MUID=${muid}`,
         Origin: "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+        Pragma: "no-cache",
+        "User-Agent": `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_FULL_VERSION} Safari/537.36 Edg/${CHROMIUM_FULL_VERSION}`,
       },
     });
 
@@ -108,7 +145,10 @@ export async function synthesizeSpeechEdge(
           context: {
             synthesis: {
               audio: {
-                metadataoptions: { sentenceBoundaryEnabled: false, wordBoundaryEnabled: false },
+                metadataoptions: {
+                  sentenceBoundaryEnabled: false,
+                  wordBoundaryEnabled: false,
+                },
                 outputFormat: "audio-24khz-48kbitrate-mono-mp3",
               },
             },

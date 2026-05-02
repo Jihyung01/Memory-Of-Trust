@@ -53,7 +53,14 @@ async function processOneElder(
   let succeeded = 0;
   let failed = 0;
 
-  for (const claim of claimed) {
+  for (let i = 0; i < claimed.length; i++) {
+    const claim = claimed[i];
+
+    // Gemini 무료 15 RPM 제한 — 2번째부터 5초 대기
+    if (i > 0) {
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+
     try {
       const utterance = await fetchUtteranceTranscript(claim.utterance_id);
       if (!utterance) {

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 const NEXT_PROMPT_FALLBACK_TEXT = "어머님, 이 사진 어디서 찍으셨어요?";
 const NEXT_PROMPT_TIMEOUT_MS =
-  env.NODE_ENV === "production" ? 15_000 : 4_500;
+  env.NODE_ENV === "production" ? 30_000 : 30_000;
 
 function hashDeviceToken(deviceToken: string): string {
   return createHmac("sha256", env.DEVICE_AUTH_SECRET)
@@ -83,6 +83,7 @@ export async function GET(request: Request) {
 
     try {
       promptText = await generateTextGemini({
+        model: "gemma-3-4b-it", // 프롬프트 생성용: 빠른 응답 우선
         prompt: photoTriggerPrompt({
           elderDisplayName: elder.display_name ?? elder.name,
           photoCaption: photo?.caption ?? undefined,

@@ -102,7 +102,14 @@ export async function POST(request: Request) {
     }
 
     // 2. 각 발화에 대해 추출 (Gemini Flash 무료 티어)
-    for (const claim of claimed) {
+    for (let i = 0; i < claimed.length; i++) {
+      const claim = claimed[i];
+
+      // Gemini 무료 15 RPM 제한 — 2번째 요청부터 5초 대기
+      if (i > 0) {
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+
       try {
         // transcript 조회
         const utterance = await fetchUtteranceTranscript(claim.utterance_id);

@@ -22,13 +22,19 @@ export default function DevPage() {
   // 자동 setup
   useEffect(() => {
     fetch("/api/dev/setup", { method: "POST" })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ error: r.statusText }));
+          throw new Error(err.error || `HTTP ${r.status}`);
+        }
+        return r.json();
+      })
       .then((data: SetupResult) => {
         setSetup(data);
         setStatus("준비 완료");
       })
       .catch((e) => {
-        setStatus(`Setup 실패: ${String(e)}`);
+        setStatus(`Setup 실패: ${String(e)}. .env.local에 ENABLE_DEV_PAGE=true 확인`);
       });
   }, []);
 
@@ -40,24 +46,19 @@ export default function DevPage() {
     setIsExtracting(true);
     addLog("추출 시작...");
     try {
-      const cronSecret = prompt("CRON_SECRET 값을 입력하세요:");
-      if (!cronSecret) {
-        addLog("취소됨");
-        setIsExtracting(false);
-        return;
-      }
-      const res = await fetch("/api/batch/extract", {
+      const res = await fetch("/api/dev/run-batch", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${cronSecret}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ elder_id: DEV_ELDER_ID, limit: 10 }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "extract", elder_id: DEV_ELDER_ID, limit: 10 }),
       });
       const data = await res.json();
-      addLog(`추출 완료: claimed=${data.claimed}, succeeded=${data.succeeded}, failed=${data.failed}`);
-      if (data.errors?.length) {
-        addLog(`에러: ${data.errors.slice(0, 3).join(", ")}`);
+      if (data.error) {
+        addLog(`추출 실패: ${data.error}`);
+      } else {
+        addLog(`추출 완료: claimed=${data.claimed}, succeeded=${data.succeeded}, failed=${data.failed}`);
+        if (data.errors?.length) {
+          addLog(`에러: ${data.errors.slice(0, 3).join(", ")}`);
+        }
       }
     } catch (e) {
       addLog(`추출 실패: ${String(e)}`);
@@ -69,22 +70,15 @@ export default function DevPage() {
     setIsGenerating(true);
     addLog("주간 카드 생성 시작...");
     try {
-      const cronSecret = prompt("CRON_SECRET 값을 입력하세요:");
-      if (!cronSecret) {
-        addLog("취소됨");
-        setIsGenerating(false);
-        return;
-      }
-      const res = await fetch("/api/batch/weekly-card", {
+      const res = await fetch("/api/dev/run-batch", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${cronSecret}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ elder_id: DEV_ELDER_ID }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "weekly-card", elder_id: DEV_ELDER_ID }),
       });
       const data = await res.json();
-      if (data.skipped) {
+      if (data.error) {
+        addLog(`주간 카드 실패: ${data.error}`);
+      } else if (data.skipped) {
         addLog(`주간 카드 스킵: ${data.reason}`);
       } else {
         addLog(`주간 카드 생성 완료: ${data.weekLabel} (${data.created ? "신규" : "업데이트"})`);
@@ -205,7 +199,7 @@ export default function DevPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs" style={{ color: "#6a6a6e" }}>
-                CRON_SECRET 값은 .env.local에서 확인하세요
+                서버에서 자동 인증됩니다 (CRON_SECRET 입력 불필요)
               </p>
             </section>
 

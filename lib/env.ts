@@ -25,7 +25,7 @@ const serverSchema = z.object({
 
   // Gemini (LLM 대화 + 추출 — 무료 티어)
   GEMINI_API_KEY: z.string().min(10),
-  GEMINI_MODEL: z.string().default("gemini-2.0-flash"),
+  GEMINI_MODEL: z.string().default("gemma-4-26b-a4b-it"),
 
   // Groq (STT Whisper — 무료 티어)
   GROQ_API_KEY: z.string().min(10),

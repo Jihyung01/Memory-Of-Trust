@@ -30,6 +30,32 @@ type ConversationPhase =
   | "processing"
   | "speaking";
 
+/**
+ * 브라우저 내장 음성합성 (SpeechSynthesis API) — 서버 TTS 실패 시 폴백.
+ * 한국어 음성이 있으면 사용, 없으면 기본 음성.
+ */
+function speakWithBrowserTTS(text: string, onEnd: () => void) {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    console.warn("Browser TTS not available");
+    onEnd();
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ko-KR";
+  utterance.rate = 0.9;
+
+  // 한국어 음성 찾기
+  const voices = window.speechSynthesis.getVoices();
+  const koreanVoice = voices.find((v) => v.lang.startsWith("ko"));
+  if (koreanVoice) utterance.voice = koreanVoice;
+
+  utterance.onend = onEnd;
+  utterance.onerror = onEnd;
+
+  window.speechSynthesis.speak(utterance);
+}
+
 export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
   const [prompt, setPrompt] = useState<NextPromptResponse | null>(null);
   const [phase, setPhase] = useState<ConversationPhase>("idle");
@@ -87,9 +113,9 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
       startedAtRef.current = new Date().toISOString();
 
       await recorderRef.current.start({
-        silenceThreshold: 15,
-        silenceDurationMs: 4000,
-        maxDurationMs: 60000,
+        silenceThreshold: 12,
+        silenceDurationMs: 6000,
+        maxDurationMs: 120000,
         onAutoStop: async () => {
           try {
             const result = await recorderRef.current?.stop();
@@ -174,7 +200,8 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
         console.log(`[device] llm/respond took ${Date.now() - llmStartedAt}ms`);
 
         if (!llmRes.ok) {
-          console.error("LLM respond failed:", llmRes.status);
+          const errBody = await llmRes.json().catch(() => ({}));
+          console.error("LLM respond failed:", llmRes.status, errBody);
           setPhase("idle");
           return;
         }
@@ -189,55 +216,55 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
         setPhase("speaking");
 
         const ttsStartedAt = Date.now();
-        const ttsRes = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: llmData.response_text,
-          }),
-        });
+        const ttsAbort = new AbortController();
+        const ttsTimer = setTimeout(() => ttsAbort.abort(), 5000); // 5초 제한
+        let ttsRes: Response | null = null;
+        try {
+          ttsRes = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: llmData.response_text }),
+            signal: ttsAbort.signal,
+          });
+        } catch {
+          ttsRes = null; // 타임아웃 또는 네트워크 에러
+        } finally {
+          clearTimeout(ttsTimer);
+        }
         console.log(`[device] tts took ${Date.now() - ttsStartedAt}ms`);
 
-        if (ttsRes.ok) {
-          const ttsData = (await ttsRes.json()) as { audio_url?: string };
-          if (!ttsData.audio_url) {
-            console.error("TTS response missing audio_url");
+        // TTS 재생 후 다음 턴으로 넘어가는 공통 로직
+        const proceedAfterSpeaking = () => {
+          audioRef.current = null;
+          if (llmData.should_end) {
+            setTurnCount(0);
             setPhase("idle");
             return;
           }
+          startRecording();
+        };
 
-          console.log("[device] tts audio_url", ttsData.audio_url);
-          const audio = new Audio(ttsData.audio_url);
-          audioRef.current = audio;
-
-          audio.onended = () => {
-            audioRef.current = null;
-            if (llmData.should_end) {
-              setTurnCount(0);
-              setPhase("idle");
-              return;
-            }
-
-            startRecording();
-          };
-          audio.onerror = () => {
-            audioRef.current = null;
-            setPhase("idle");
-          };
-
-          await audio.play().catch(() => {
-            console.log("[device] audio playback skipped", ttsData.audio_url);
-            if (llmData.should_end) {
-              setTurnCount(0);
-            }
-            setPhase("idle");
-          });
-        } else {
-          console.error("TTS failed:", ttsRes.status);
-          if (llmData.should_end) {
-            setTurnCount(0);
+        if (ttsRes?.ok) {
+          const ttsData = (await ttsRes.json()) as { audio_url?: string };
+          if (ttsData.audio_url) {
+            console.log("[device] tts audio_url", ttsData.audio_url);
+            const audio = new Audio(ttsData.audio_url);
+            audioRef.current = audio;
+            audio.onended = proceedAfterSpeaking;
+            audio.onerror = proceedAfterSpeaking;
+            await audio.play().catch(() => {
+              console.log("[device] audio playback skipped");
+              proceedAfterSpeaking();
+            });
+          } else {
+            // audio_url 없으면 브라우저 TTS 폴백
+            console.warn("TTS response missing audio_url, using browser TTS");
+            speakWithBrowserTTS(llmData.response_text, proceedAfterSpeaking);
           }
-          setPhase("idle");
+        } else {
+          // 서버 TTS 실패 → 브라우저 내장 음성합성으로 폴백
+          console.warn("Server TTS failed, using browser TTS fallback");
+          speakWithBrowserTTS(llmData.response_text, proceedAfterSpeaking);
         }
       } catch (error) {
         console.error("Conversation processing error:", error);
