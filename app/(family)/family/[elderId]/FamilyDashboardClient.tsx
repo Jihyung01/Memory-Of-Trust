@@ -401,7 +401,7 @@ export function FamilyDashboardClient({
               style={{ background: "#fff", borderColor: "#e0dbd2" }}
             >
               <p className="text-sm italic" style={{ color: "#8a8880" }}>
-                질문 기능은 곧 ��가됩니다.
+                질문 기능은 곧 추가됩니다.
               </p>
             </div>
           </section>

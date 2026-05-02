@@ -363,8 +363,11 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
 
   return (
     <main
-      className="fixed inset-0 flex min-h-screen flex-col overflow-hidden"
-      style={{ background: "var(--radio-body)" }}
+      className="fixed inset-0 flex min-h-screen select-none flex-col overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(180deg, #fbf7ee 0%, var(--radio-body) 48%, #eadcc5 100%)",
+      }}
     >
       {/* 상단 바 */}
       <header
@@ -372,13 +375,14 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
         style={{
           background: "var(--radio-bezel)",
           borderColor: "var(--radio-border)",
+          boxShadow: "0 2px 16px rgba(65, 50, 32, 0.08)",
         }}
       >
         <div className="flex items-center gap-3">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-full border-2"
             style={{
-              background: "radial-gradient(circle, #8a8880, #5a5a5e)",
+              background: "radial-gradient(circle, #315f69, #24464e)",
               borderColor: "var(--radio-border)",
             }}
           >
@@ -405,7 +409,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
             }}
           />
           <span className="text-xs" style={{ color: "var(--radio-text-dim)" }}>
-            {phase === "recording" ? "듣는 중" : "연결됨"}
+            {phase === "recording" ? ko.elder.statusListening : ko.elder.statusConnected}
           </span>
         </div>
       </header>
@@ -423,7 +427,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
           <PromptBubble
             text={
               phase === "recording"
-                ? "말씀하세요, 듣고 있어요"
+                ? ko.elder.listeningHint
                 : phase === "processing"
                   ? "..."
                   : bubbleText || ko.elder.promptFallback

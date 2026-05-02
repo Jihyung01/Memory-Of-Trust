@@ -9,11 +9,12 @@ export function PromptBubble({ text, isRecording = false }: PromptBubbleProps) {
       className="max-w-md rounded-2xl border-2 px-8 py-5 text-center"
       style={{
         background: isRecording
-          ? "rgba(255, 100, 60, 0.06)"
+          ? "rgba(183, 95, 42, 0.10)"
           : "var(--radio-accent-dim)",
         borderColor: isRecording
-          ? "rgba(255, 100, 60, 0.2)"
-          : "rgba(255, 180, 60, 0.12)",
+          ? "rgba(183, 95, 42, 0.26)"
+          : "rgba(49, 95, 105, 0.18)",
+        boxShadow: "0 10px 24px rgba(63, 48, 30, 0.08)",
       }}
     >
       {/* 녹음 중 파형 */}

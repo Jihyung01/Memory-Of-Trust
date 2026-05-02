@@ -1,3 +1,16 @@
+# MOT v2 Future Schema (Draft, Not Applied)
+
+> ⚠️  **이 파일은 운영 DB 에 적용된 적 없는 v2 future spec 이다.**
+> 운영 스키마의 진실 출처는 `supabase/migrations/*.sql` 이다.
+> 이 파일의 SQL 을 Supabase SQL Editor 에서 실행하면 운영 DB 와 충돌한다 (예: `users` ↔ `elders`, `utterance_events` ↔ `raw_utterances`).
+> 
+> 보존 이유: 향후 v2 진화 (event sourcing 기반 메모리 / 페르소나 / 생애 스레드) 설계 참조용.
+>
+> _격리 시점: 2026-05-02 (Sprint 0 종결 후 dead branch 정리)_
+
+---
+
+```sql
 -- =====================================================
 -- MOT (Memory Of Trust) — Supabase Schema v1
 -- =====================================================
@@ -962,3 +975,4 @@ SELECT
 FROM information_schema.tables
 WHERE table_schema = 'public'
   AND table_type = 'BASE TABLE';
+```

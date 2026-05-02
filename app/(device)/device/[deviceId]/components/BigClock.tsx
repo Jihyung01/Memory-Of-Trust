@@ -36,7 +36,7 @@ export function BigClock() {
       style={{
         background: "var(--radio-panel)",
         borderColor: "var(--radio-border)",
-        boxShadow: "inset 0 1px 4px rgba(0,0,0,0.3)",
+        boxShadow: "0 8px 22px rgba(63, 48, 30, 0.08), inset 0 1px 0 rgba(255,255,255,0.75)",
       }}
     >
       <time
@@ -44,7 +44,7 @@ export function BigClock() {
         dateTime={now?.toISOString()}
         style={{
           color: "var(--radio-accent)",
-          textShadow: "0 0 12px var(--radio-accent-glow)",
+          textShadow: "0 2px 10px var(--radio-accent-glow)",
         }}
       >
         {clock.time}

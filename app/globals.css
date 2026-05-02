@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1A1D22;
-  --foreground: #C8CDD2;
+  --background: #f4efe6;
+  --foreground: #272421;
 
-  /* Cold Analog 팔레트 — 빈티지 금속 톤 */
-  --radio-body: #1A1D22;
-  --radio-panel: #252A30;
-  --radio-bezel: #3A3E44;
-  --radio-border: #4A5058;
-  --radio-accent: #80B0D0;
-  --radio-accent-dim: rgba(128, 176, 208, 0.10);
-  --radio-accent-glow: rgba(128, 176, 208, 0.35);
-  --radio-text: #C8CDD2;
-  --radio-text-dim: #6E757D;
-  --radio-dot: rgba(138, 144, 152, 0.2);
-  --radio-rec: #E8A050;
-  --radio-rec-glow: rgba(232, 160, 80, 0.45);
+  /* Warm Analog 팔레트 — 어르신 화면용 밝은 라디오/액자 톤 */
+  --radio-body: #f4efe6;
+  --radio-panel: #fffaf1;
+  --radio-bezel: #e8ddca;
+  --radio-border: #cdbfaa;
+  --radio-accent: #315f69;
+  --radio-accent-dim: rgba(49, 95, 105, 0.10);
+  --radio-accent-glow: rgba(49, 95, 105, 0.18);
+  --radio-text: #272421;
+  --radio-text-dim: #6f6457;
+  --radio-dot: rgba(91, 76, 58, 0.24);
+  --radio-rec: #b75f2a;
+  --radio-rec-glow: rgba(183, 95, 42, 0.28);
 }
 
 @theme inline {
@@ -33,10 +33,10 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  overflow: hidden;
+  overflow: auto;
   -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
-  user-select: none;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* 레트로 라디오 애니메이션 */

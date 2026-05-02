@@ -18,7 +18,7 @@ export class OpenAIRateLimitError extends Error {
   }
 }
 
-function getOpenAIClient(): OpenAI {
+export function getOpenAIClient(): OpenAI {
   if (!client) {
     client = new OpenAI({
       apiKey: env.OPENAI_API_KEY,

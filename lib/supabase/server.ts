@@ -249,6 +249,124 @@ export async function fetchRecentUtterancesInSession(
   return (data ?? []) as { id: string; transcript: string; started_at: string }[];
 }
 
+export interface MemoryContextForResponse {
+  recentUtterances: { id: string; transcript: string; started_at: string }[];
+  entities: { name: string; relation: string | null; emotional_tone: string | null }[];
+  themes: { theme: string; weight: number }[];
+  unresolved: { type: string; excerpt: string }[];
+  sensory: { sense: string; detail: string; context: string | null }[];
+}
+
+function truncateMemoryText(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+}
+
+/**
+ * LLM 응답용 RAG 컨텍스트 조회.
+ * raw_utterances는 SELECT만 수행한다. UPDATE/DELETE 금지.
+ */
+export async function fetchMemoryContextForResponse(
+  elderId: string,
+  currentUtteranceId?: string | null
+): Promise<MemoryContextForResponse> {
+  const db = getSupabaseServiceClient();
+
+  const recentQuery = db
+    .from("raw_utterances")
+    .select("id, transcript, started_at")
+    .eq("elder_id", elderId)
+    .order("started_at", { ascending: false })
+    .limit(5);
+
+  if (currentUtteranceId) {
+    recentQuery.neq("id", currentUtteranceId);
+  }
+
+  const [
+    recentResult,
+    entitiesResult,
+    themesResult,
+    unresolvedResult,
+    sensoryResult,
+  ] = await Promise.all([
+    recentQuery,
+    db
+      .from("entities")
+      .select("name, relation, emotional_tone")
+      .eq("elder_id", elderId)
+      .order("mention_count", { ascending: false })
+      .limit(5),
+    db
+      .from("themes")
+      .select("theme, weight")
+      .eq("elder_id", elderId)
+      .order("weight", { ascending: false })
+      .limit(5),
+    db
+      .from("unresolved_queue")
+      .select("type, excerpt")
+      .eq("elder_id", elderId)
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(3),
+    db
+      .from("sensory_details")
+      .select("sense, detail, context")
+      .eq("elder_id", elderId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+
+  if (recentResult.error) {
+    throw new Error(`[supabase] fetchMemoryContext recent: ${recentResult.error.message}`);
+  }
+  if (entitiesResult.error) {
+    throw new Error(`[supabase] fetchMemoryContext entities: ${entitiesResult.error.message}`);
+  }
+  if (themesResult.error) {
+    throw new Error(`[supabase] fetchMemoryContext themes: ${themesResult.error.message}`);
+  }
+  if (unresolvedResult.error) {
+    throw new Error(`[supabase] fetchMemoryContext unresolved: ${unresolvedResult.error.message}`);
+  }
+  if (sensoryResult.error) {
+    throw new Error(`[supabase] fetchMemoryContext sensory: ${sensoryResult.error.message}`);
+  }
+
+  return {
+    recentUtterances: ((recentResult.data ?? []) as {
+      id: string;
+      transcript: string;
+      started_at: string;
+    }[])
+      .reverse()
+      .map((utterance) => ({
+        ...utterance,
+        transcript: truncateMemoryText(utterance.transcript, 300),
+      })),
+    entities: ((entitiesResult.data ?? []) as {
+      name: string;
+      relation: string | null;
+      emotional_tone: string | null;
+    }[]).map((e) => ({ ...e, name: truncateMemoryText(e.name, 50) })),
+    themes: ((themesResult.data ?? []) as { theme: string; weight: number }[]).map(
+      (t) => ({ ...t, theme: truncateMemoryText(t.theme, 80) })
+    ),
+    unresolved: ((unresolvedResult.data ?? []) as { type: string; excerpt: string }[]).map(
+      (u) => ({ ...u, excerpt: truncateMemoryText(u.excerpt, 200) })
+    ),
+    sensory: ((sensoryResult.data ?? []) as {
+      sense: string;
+      detail: string;
+      context: string | null;
+    }[]).map((s) => ({
+      ...s,
+      detail: truncateMemoryText(s.detail, 100),
+      context: s.context ? truncateMemoryText(s.context, 100) : null,
+    })),
+  };
+}
+
 // ============================================================
 // extraction_log
 // ============================================================

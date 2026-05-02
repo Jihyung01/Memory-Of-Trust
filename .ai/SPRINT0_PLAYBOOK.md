@@ -32,20 +32,42 @@ claude --version # Claude Code
 
 ## 1. 진행 트래커 (체크하면서 진행)
 
+> **상태: Sprint 0 ✅ 종결 (2026-05-02). Phase 1 진입 직전. §7 진입 큐 참조.**
+
+이 트래커는 두 갈래다:
+- **A. 초기 빌드 (구 트래커, T1~T8)** — Codex CLI/Claude Code 첫 통과로 완료.
+- **B. 검증 패스 (Claude Opus 4.7 + Codex 협업, harness §13 기준)** — 누락된 RAG/RLS 토대를 실제로 박은 두 번째 통과. 2026-05-02 진행.
+
+### 1-A. 초기 빌드 (1차 통과)
+
 | Task | 설명 | 도구 / 모델 | 상태 |
 |---|---|---|---|
-| T1 | next-app 스캐폴드 + lib + PWA manifest | Codex / gpt-5.5 | ✅ 완료 (수동 + Codex) |
-| T2 | Supabase 스키마 + RLS + seed | (수동 SQL Editor) | ✅ 완료 |
-| T3 | 디바이스 인증 + 다음 프롬프트 API | Codex / gpt-5.5 | ✅ 완료 |
-| 리뷰① | T3 diff 리뷰 (인증 보안) | Claude Code / opus-4-7 | ⬜ 보류 (T7 검수와 묶어 일괄 처리 예정) |
-| T4 | 어르신 디바이스 화면 (시계/사진/마이크) | Codex / gpt-5.5 | ✅ 완료 |
-| 검수② | Elder UX Guardian (어르신 화면 검수) | Claude Code / opus-4-7 | ⬜ Phase 1 Week 1 검수 예정 |
-| 설계③ | T5 시작 전 설계 (raw_utterances INSERT 안전성) | Claude Code / opus-4-7 | ✅ 마스터 문서 §6-4 불변식으로 대체 |
-| T5 | 음성 녹음 + STT + raw_utterances 저장 | Codex / gpt-5.5 | ✅ dev 텍스트 시뮬레이션으로 통과 (마이크는 Phase 1 실태블릿 검증) |
-| T6 | LLM 응답 + OpenAI TTS + audio_url 생성 | Codex / gpt-5.5 | ✅ 완료 (TTS는 OpenAI로 변경, signed URL 200) |
-| T7 | 자녀 대시보드 (로그인 + 발화 목록 + 사진 업로드) | Codex / gpt-5.5 | 🟡 일부 (login 동작, /family/[elderId] 표시·사진 업로드 직접 클릭 검증 남음) |
-| 리뷰④ | T7 끝나고 RLS 검증 | Claude Code / opus-4-7 | ⬜ Phase 1 Week 1 |
-| **T8** | **DoD 시나리오 수동 테스트** | **(사용자 본인)** | 🟡 **마지막 5분 — 아래 §6 참조** |
+| T1 | next-app 스캐폴드 + lib + PWA manifest | Codex / gpt-5.5 | ✅ |
+| T2 | Supabase 스키마 + RLS + seed (운영 migrations) | (수동 SQL Editor) | ✅ |
+| T3 | 디바이스 인증 + 다음 프롬프트 API | Codex / gpt-5.5 | ✅ |
+| T4 | 어르신 디바이스 화면 (시계/사진/마이크) | Codex / gpt-5.5 | ✅ |
+| T5 | 음성 녹음 + STT + raw_utterances 저장 | Codex / gpt-5.5 | ✅ |
+| T6 | LLM 응답 + TTS (Edge TTS) + audio_url | Codex / gpt-5.5 | ✅ |
+| T7 | 자녀 대시보드 (로그인 + 발화 목록 + 사진 업로드) | Codex / gpt-5.5 | ✅ |
+| T8 | DoD 시나리오 수동 테스트 | (사용자 본인) | ✅ |
+
+### 1-B. 검증 패스 (Claude Opus 4.7 + Codex, 2026-05-02)
+
+harness §13 명세 기준으로 1차 통과 결과를 검증하면서 발견한 갭을 메운 작업.
+
+| Step | 발견/작업 | 결과 |
+|---|---|---|
+| T1 픽스 | `.env.example` ↔ `lib/env.ts` 키 정렬 (NAVER_CLOVA 제거, GEMINI/GROQ/ENABLE_DEV_PAGE 추가) | ✅ |
+| T2 픽스 | 신규 마이그레이션 `20260502000001_pgvector_rag.sql` (`vector` ext + `utterance_embeddings` + `match_utterances` RPC + RLS + grants) | ✅ Supabase 적용됨 |
+| T2 부산물 (A1) | `fetchMemoryContextForResponse` 8축 컨텍스트 주입 + 에러 폴백 + 6필드 길이 캡 (entities.name 50, themes 80, unresolved.excerpt 200, sensory.detail/context 100, recentUtterances.transcript 300) | ✅ |
+| T3 신규 | `lib/ai/embedding.ts` (createEmbedding/Batch, 1536 차원 검증, OPENAI_API_KEY 가드) + `lib/memory/{embed,retrieve,format-context}.ts` | ✅ |
+| T4 검증 | `/api/device/{auth,next-prompt,utterance}` 보안/명세 통과 — HMAC, raw_utterances immutable, fallback 체인 | ✅ (리뷰① 흡수) |
+| T5 픽스 | `DevicePageClient.tsx` 한국어 리터럴 3건 → `ko.elder.{listeningHint,statusListening,statusConnected}` | ✅ |
+| T6 hook | `app/api/device/utterance/route.ts` raw_utterances INSERT 직후 `embedUtterance` 자동 호출 (await + try/catch graceful) | ✅ |
+| T7 통합 | `/api/llm/respond` 에 `retrieveSimilarUtterances` 통합 (topK=3, threshold=0.7, 자기 자신 제외) → `formatMemoryContext({ ...memoryContext, similarUtterances })` | ✅ |
+| T8 DoD | 6개 항목 전부 통과 (§6 참조). family-photos Storage 버킷 추가로 마지막 §E 통과 | ✅ |
+| 리뷰①·④ | T4·T7 검증 패스에 흡수 | ✅ |
+| 검수② Elder UX Guardian | 정식 검수 미실시 (큰 갭만 처리) | ⬜ Phase 1 Week 1 |
 
 ---
 
@@ -423,14 +445,28 @@ T7 끝나면 멈추고 보고.
 - [ ] (선택) audio_url 클릭 → mp3 다운로드 → 핸드폰에서 재생해 캐릭터 톤 1회 확인
 
 ### E. 자녀 대시보드 발화 표시
-- [ ] `http://localhost:3002/family/login` 매직링크 로그인 (메일함 확인)
-- [ ] `http://localhost:3002/family/00000000-0000-0000-0000-000000000001` 접속
-- [ ] 방금 입력한 transcript 가 발화 목록에 표시
-- [ ] `/family/<elderId>/photos` → 사진 업로드 폼 동작 확인
+- [x] `http://localhost:3002/family/login` 매직링크 로그인 (메일함 확인)
+- [x] `http://localhost:3002/family/00000000-0000-0000-0000-000000000001` 접속
+- [x] 방금 입력한 transcript 가 발화 목록에 표시
+- [x] `/family/<elderId>/photos` → 사진 업로드 폼 동작 확인 (**family-photos Storage 버킷 수동 생성 필요했음 — 신규 환경 셋업 시 주의**)
 
-A~E 모두 통과 → **Sprint 0 완료. Phase 1 진입.**
+A~E 모두 통과 → **Sprint 0 ✅ 완료 (2026-05-02). Phase 1 진입.**
 
-마이크/스피커 본격 검증은 `docs/PHASE1_PLAN.md` Week 2 (실제 7인치 태블릿 셋업) 에서.
+### Sprint 0 §13 DoD 6개 — 전부 통과
+- [x] 사진 보고 한 마디 → 30초 내 DB 영구 저장
+- [x] **자동 embedding 생성됨 (utterance_embeddings에 행 추가)** ← T2 + T6 hook
+- [x] AI가 RAG 활용해서 부드러운 응답 생성 ← A1 + T7 통합
+- [x] 응답 음성으로 재생됨 (Edge TTS 또는 browser TTS 폴백)
+- [x] 자녀 대시보드에서 transcript 확인 가능
+- [x] **두 번째 발화 시 이전 발화가 컨텍스트로 자동 주입** ← T7 의미 검색 통합
+
+### Storage 버킷 체크리스트 (신규 환경 셋업 시)
+Supabase Dashboard → Storage → New bucket (private, public OFF):
+- [ ] `family-photos`
+- [ ] `utterances`
+- [ ] `tts-cache`
+
+마이크/스피커 본격 검증은 `docs/PHASE1_PLAYBOOK.md` Week 2 (실제 7인치 태블릿 셋업) 에서.
 
 ---
 
@@ -472,7 +508,27 @@ claude --version
 
 ## 5. 새 Cowork / Claude / Codex 대화에서 시작할 때
 
-새 대화창에 첫 메시지로 붙여넣기:
+### 5-A. Phase 1 진입 후속 작업 (Sprint 0 종결 후 — 권장)
+
+새 Claude Code 대화창에 첫 메시지:
+
+```text
+이 폴더(Memory-Of-Trust)는 MOT 프로젝트다. Sprint 0 ✅ 종결, Phase 1 진입 직전.
+
+다음 파일을 정독해라:
+- CLAUDE.md
+- .ai/harness.md
+- .ai/SPRINT0_PLAYBOOK.md §1-B 검증 패스 결과 + §7 Phase 1 진입 큐
+
+다음으로 시작할 것: [§7 큐에서 골라 한 줄로]
+
+§5 출력 스타일(Diagnosis / Risk / Recommended Plan / Execution Steps / Validation / Rollback)대로 진행한다.
+Codex 작업이 필요하면 프롬프트를 짜주고, 실제 실행은 사용자가 한다.
+```
+
+### 5-B. Sprint 0 도중 (구 — 이미 종결됐으므로 사용 X)
+
+(기존 트래커 진행 중에만 의미 있던 템플릿. 보존만.)
 
 ```text
 이 폴더(Memory-Of-Trust)는 MOT 프로젝트다.
@@ -481,7 +537,7 @@ claude --version
 - .ai/harness.md
 - .ai/SPRINT0_PLAYBOOK.md (이 매뉴얼)
 
-현재 진행 상태: §1 진행 트래커의 [여기에 내가 끝낸 마지막 ✅ 단계 적기]
+현재 진행 상태: §1 진행 트래커의 [내가 끝낸 마지막 ✅ 단계]
 다음으로 시작할 것: [트래커의 ⬜ 첫 항목]
 
 §2 의 해당 단계 명령을 그대로 실행한다.
@@ -489,4 +545,41 @@ claude --version
 
 ---
 
-_v1 / 2026-04-27 / Sprint 0 매뉴얼_
+## 7. Phase 1 진입 큐 (Sprint 0 종결 후 처리할 것)
+
+복귀 시 이 리스트로 시작. 우선순위 순.
+
+### 🔴 Phase 1 어르신 실사용 직전 필수
+
+| # | 항목 | 비용/규모 | 메모 |
+|---|---|---|---|
+| 1 | **TTS 안정화** — Edge TTS 5초 타임아웃 빈번 → browser TTS 폴백 → 손주 같은 작가 톤 깨짐 | OpenAI TTS-1 = 약 180원/월/가구. 비용 무시 가능 | 단계: (a) Edge 타임아웃 5→8초, (b) 그래도 불안정하면 OpenAI TTS-1 전환. Phase 4(50가구) 시점 XTTS-v2 자체 호스팅 |
+| 2 | **Elder UX Guardian 정식 검수** — `agent-prompts/08_elder_ux_guardian_claude.md` 기준 | - | MOT 헤더 브랜드, VuMeter speaking active, 폰트 크기 등 디자인 결정 일괄 |
+| 3 | **Sentry 통합** — STT/LLM/TTS API 실패 모니터링 | 무료 티어 충분 | T1 deferral 항목. 어르신 실사용 시작 시 이슈 모니터링 필수 |
+
+### ✅ Q1/Q2 후속 (2026-05-02 완료)
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 4 | ~~`app/visit/*`, `lib/context.ts`, `lib/types.ts` dead branch 격리~~ | ✅ 완료. 모두 active 코드 의존 0건 확인 → 통째로 삭제 (`app/home-page-client.tsx`, `app/visit/`, `app/api/visit/`, `lib/context.ts`, `lib/types.ts`) |
+| 5 | ~~`supabase/schema.sql` → `docs/SCHEMA_V2_DRAFT.md` 격리~~ | ✅ 완료. 헤더에 "운영 DB 미적용 / 실행 시 충돌 경고" 명시. SQL 코드블록으로 감쌈 |
+
+### 🟢 보안/안정성 deferral (시점 명시)
+
+| # | 항목 | 시점 |
+|---|---|---|
+| 6 | `/api/cron/embed-new` 배치 — utterance INSERT 시 동기 hook 실패한 경우 누락분 백필 | Phase 2 진입 시 |
+| 7 | `/api/device/next-prompt`의 photo caption/people_in_photo 길이 캡 | Phase 1 진입 직전 |
+| 8 | `/api/llm/respond`의 `${transcript}` escape 보강 | Phase 1 진입 직전 |
+| 9 | `utterance.meta.transcript` 신뢰 모델 — 클라이언트가 임의 transcript 보낼 수 있음 | Phase 1 디바이스 키오스크화와 묶어서 |
+
+### 🔵 디자인 결정 보류 (사용자 답 대기)
+
+| # | 항목 |
+|---|---|
+| 10 | MOT 헤더 브랜드 노출: keep / remove / 더 작게 |
+| 11 | VuMeter `active` 조건: `recording`만 / 현재 그대로 (recording + speaking) |
+
+---
+
+_v2 / 2026-05-02 / Sprint 0 종결 + Phase 1 진입 큐 추가_

@@ -6,13 +6,14 @@ interface PhotoFrameProps {
 export function PhotoFrame({ photoUrl, caption }: PhotoFrameProps) {
   return (
     <div
-      className="w-full max-w-md overflow-hidden rounded-xl border-2"
+      className="w-full max-w-md overflow-hidden rounded-xl border-2 p-2"
       style={{
-        background: "var(--radio-panel)",
+        background: "#fffdf8",
         borderColor: "var(--radio-border)",
+        boxShadow: "0 18px 36px rgba(65, 50, 32, 0.12)",
       }}
     >
-      <div className="aspect-[4/3] w-full overflow-hidden">
+      <div className="aspect-[4/3] w-full overflow-hidden rounded-lg">
         {photoUrl ? (
           <img
             alt={caption ?? ""}
@@ -23,9 +24,9 @@ export function PhotoFrame({ photoUrl, caption }: PhotoFrameProps) {
         ) : (
           <div
             className="flex h-full w-full flex-col items-center justify-center gap-2"
-            style={{ background: "var(--radio-body)" }}
+            style={{ background: "#efe5d3" }}
           >
-            <span className="text-4xl opacity-25">📷</span>
+            <span className="text-4xl opacity-50">사진</span>
             <span
               className="text-sm"
               style={{ color: "var(--radio-text-dim)" }}

@@ -11,7 +11,7 @@ interface VuMeterProps {
 
 /**
  * 아날로그 VU 미터 — 녹음 중 바늘이 움직이는 라디오 계기판.
- * 차가운 금속 프레임 + 따뜻한 앰버 바늘 (유일한 온기).
+ * 밝은 종이 계기판 + 따뜻한 바늘.
  */
 export function VuMeter({ level, active }: VuMeterProps) {
   const [simLevel, setSimLevel] = useState(0);
@@ -130,7 +130,7 @@ export function VuMeter({ level, active }: VuMeterProps) {
       style={{
         background: "var(--radio-panel, #252A30)",
         borderColor: "var(--radio-border, #4A5058)",
-        boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)",
+        boxShadow: "0 8px 18px rgba(65, 50, 32, 0.08), inset 0 1px 0 rgba(255,255,255,0.75)",
         opacity: active ? 1 : 0.4,
         transition: "opacity 0.5s ease",
       }}

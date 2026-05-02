@@ -70,6 +70,7 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
         style={{
           background: "var(--radio-bezel)",
           borderColor: "var(--radio-border)",
+          boxShadow: "0 12px 28px rgba(65, 50, 32, 0.12), inset 0 1px 0 rgba(255,255,255,0.5)",
         }}
       >
         {/* 소리 보조 버튼 */}
@@ -135,15 +136,15 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
             className="relative z-10 flex h-22 w-22 items-center justify-center rounded-full border-3 transition-transform duration-200"
             style={{
               background: isActive
-                ? "radial-gradient(circle at 40% 35%, #ff6a3c, #cc4420)"
+                ? "radial-gradient(circle at 40% 35%, #d57943, #9e451d)"
                 : isProcessing
-                  ? "radial-gradient(circle at 40% 35%, #6a6a70, #4a4a50)"
-                  : "radial-gradient(circle at 40% 35%, #e8a040, #c87820)",
+                  ? "radial-gradient(circle at 40% 35%, #b8aa97, #8c7e6d)"
+                  : "radial-gradient(circle at 40% 35%, #e6ba6a, #b77a2b)",
               borderColor: isActive
-                ? "#ff8a50"
+                ? "#d88b55"
                 : isProcessing
-                  ? "#5a5a60"
-                  : "#a07040",
+                  ? "#a99a86"
+                  : "#9c7442",
               animation: isActive
                 ? "mic-glow 1.5s ease-in-out infinite"
                 : isProcessing
@@ -153,7 +154,7 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
               transform: disabled ? "none" : undefined,
             }}
           >
-            <MicIcon color={isActive ? "#fff" : isProcessing ? "#999" : "#2a2a2d"} />
+            <MicIcon color={isActive ? "#fff" : isProcessing ? "#6f6457" : "#272421"} />
           </button>
 
           <span

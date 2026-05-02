@@ -1,6 +1,15 @@
 import { generateTextGemini } from "@/lib/ai/gemini";
 import { ELDER_CHARACTER_SYSTEM_PROMPT } from "@/lib/ai/prompts";
-import { fetchRawUtteranceForResponse } from "@/lib/supabase/server";
+import { formatMemoryContext } from "@/lib/memory/format-context";
+import {
+  retrieveSimilarUtterances,
+  type SimilarUtterance,
+} from "@/lib/memory/retrieve";
+import {
+  fetchMemoryContextForResponse,
+  fetchRawUtteranceForResponse,
+  type MemoryContextForResponse,
+} from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -84,10 +93,39 @@ export async function POST(request: Request) {
       return Response.json({ error: "utterance_id or transcript is required" }, { status: 400 });
     }
 
+    let memoryContext: MemoryContextForResponse | null = null;
+    if (elderId) {
+      try {
+        memoryContext = await fetchMemoryContextForResponse(elderId, utteranceId);
+      } catch (error) {
+        console.warn("[llm/respond] memory context fallback:", error);
+      }
+    }
+
+    let similarUtterances: SimilarUtterance[] = [];
+    if (memoryContext && elderId && transcript) {
+      try {
+        const retrieved = await retrieveSimilarUtterances({
+          elderId,
+          queryText: transcript,
+          topK: 3,
+          threshold: 0.7,
+        });
+        similarUtterances = utteranceId
+          ? retrieved.filter((u) => u.id !== utteranceId)
+          : retrieved;
+      } catch (error) {
+        console.warn("[llm/respond] retrieve similar fallback:", error);
+      }
+    }
+
     const responseText = await generateTextGemini({
       model: "gemma-3-4b-it", // 대화용: 빠른 응답 우선
       systemPrompt: [
         ELDER_CHARACTER_SYSTEM_PROMPT,
+        ...(memoryContext
+          ? ["", formatMemoryContext({ ...memoryContext, similarUtterances })]
+          : []),
         "",
         "【대화 종료 규칙】",
         "- 대화를 자연스럽게 마무리할 때만 응답 끝에 [END] 를 붙인다.",

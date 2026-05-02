@@ -10,6 +10,7 @@
 import { createHmac } from "node:crypto";
 
 import { env } from "@/lib/env";
+import { embedUtterance } from "@/lib/memory/embed";
 import {
   type DeviceAuthRecord,
   fetchDeviceByRawTokenDev,
@@ -101,6 +102,18 @@ export async function POST(request: Request) {
       startedAt: meta.started_at,
       endedAt: meta.ended_at,
     });
+
+    try {
+      await embedUtterance({
+        utteranceId: utterance.id,
+        transcript: meta.transcript,
+      });
+    } catch (err) {
+      console.warn(
+        "[utterance] embedding failed (non-fatal, will retry by cron later):",
+        err
+      );
+    }
 
     return Response.json({
       utterance_id: utterance.id,

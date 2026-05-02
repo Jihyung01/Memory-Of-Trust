@@ -21,6 +21,11 @@ export const ko = {
     micStart: "이야기 시작",
     micStop: "잠시 멈추기",
 
+    // 대화 상태 안내
+    listeningHint: "말씀하세요, 듣고 있어요",
+    statusListening: "듣는 중",
+    statusConnected: "연결됨",
+
     // 사진 문장이 늦게 올 때 자연스러운 기본 문장
     promptFallback: "사진을 보며 떠오르는 이야기를 들려주세요",
 
