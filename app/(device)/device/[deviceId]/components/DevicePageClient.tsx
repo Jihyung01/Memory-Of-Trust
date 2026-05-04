@@ -217,7 +217,7 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
 
         const ttsStartedAt = Date.now();
         const ttsAbort = new AbortController();
-        const ttsTimer = setTimeout(() => ttsAbort.abort(), 5000); // 5초 제한
+        const ttsTimer = setTimeout(() => ttsAbort.abort(), 10000); // 10초 제한 (OpenAI warm ~5초 + cold start 시 1회만 폴백)
         let ttsRes: Response | null = null;
         try {
           ttsRes = await fetch("/api/tts", {
@@ -369,61 +369,13 @@ export function DevicePageClient({ deviceToken }: DevicePageClientProps) {
           "linear-gradient(180deg, #fbf7ee 0%, var(--radio-body) 48%, #eadcc5 100%)",
       }}
     >
-      {/* 상단 바 */}
-      <header
-        className="flex items-center justify-between border-b-2 px-6 py-3"
-        style={{
-          background: "var(--radio-bezel)",
-          borderColor: "var(--radio-border)",
-          boxShadow: "0 2px 16px rgba(65, 50, 32, 0.08)",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full border-2"
-            style={{
-              background: "radial-gradient(circle, #315f69, #24464e)",
-              borderColor: "var(--radio-border)",
-            }}
-          >
-            <span className="text-sm font-medium" style={{ color: "var(--radio-body)" }}>
-              M
-            </span>
-          </div>
-          <span
-            className="text-sm tracking-widest"
-            style={{ color: "var(--radio-text-dim)" }}
-          >
-            MOT
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="h-2 w-2 rounded-full"
-            style={{
-              background: phase === "recording" ? "var(--radio-rec)" : "#7ab87a",
-              animation:
-                phase === "recording"
-                  ? "dot-blink 1s ease-in-out infinite"
-                  : "breathe 3s ease-in-out infinite",
-            }}
-          />
-          <span className="text-xs" style={{ color: "var(--radio-text-dim)" }}>
-            {phase === "recording" ? ko.elder.statusListening : ko.elder.statusConnected}
-          </span>
-        </div>
-      </header>
-
       {/* 메인 콘텐츠 */}
       <div className="flex flex-1 flex-col items-center justify-between gap-4 overflow-hidden px-6 py-4">
         <BigClock />
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
-          <VuMeter active={phase === "recording" || phase === "speaking"} />
-          <PhotoFrame
-            caption={prompt?.photo_caption ?? null}
-            photoUrl={prompt?.photo_url ?? null}
-          />
+          <VuMeter active={phase === "recording"} />
+          <PhotoFrame photoUrl={prompt?.photo_url ?? null} />
           <PromptBubble
             text={
               phase === "recording"

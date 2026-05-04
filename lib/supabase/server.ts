@@ -138,7 +138,7 @@ export async function createPhotoPrompt(input: {
 export async function createPhotoSignedUrl(storagePath: string): Promise<string> {
   const db = getSupabaseServiceClient();
   const { data, error } = await db.storage
-    .from("photos")
+    .from("family-photos")
     .createSignedUrl(storagePath, 60 * 60);
 
   if (error) {

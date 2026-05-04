@@ -19,6 +19,7 @@ export interface TTSOptions {
   voice?: string;
   /** 0.25 ~ 4.0, 기본 1.0. 어르신용은 약간 느리게 0.85 */
   speed?: number;
+  timeoutMs?: number;
 }
 
 /**
@@ -31,20 +32,29 @@ export async function synthesizeSpeech(options: TTSOptions): Promise<Buffer> {
     throw new Error("[openai-tts] Empty text for TTS");
   }
 
-  const response = await fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "tts-1",
-      input: text.slice(0, 4096), // OpenAI TTS 글자 제한
-      voice,
-      speed,
-      response_format: "mp3",
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 6000);
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "tts-1",
+        input: text.slice(0, 4096), // OpenAI TTS 글자 제한
+        voice,
+        speed,
+        response_format: "mp3",
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "unknown");

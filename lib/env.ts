@@ -49,6 +49,16 @@ const serverSchema = z.object({
     .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   COGNO_MODEL: z.string().default("qwen3.6:35b"),
 
+  // Sentry (Phase 1, optional)
+  SENTRY_DSN: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  NEXT_PUBLIC_SENTRY_DSN: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  SENTRY_ORG: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  SENTRY_PROJECT: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+
   // 인증/Cron
   DEVICE_AUTH_SECRET: z.string().min(32, "DEVICE_AUTH_SECRET must be ≥32 chars"),
   CRON_SECRET: z.string().min(16, "CRON_SECRET must be ≥16 chars"),
@@ -63,6 +73,8 @@ const clientSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  NEXT_PUBLIC_SENTRY_DSN: z
+    .preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
 });
 
 type ServerEnv = z.infer<typeof serverSchema>;
@@ -106,6 +118,7 @@ export const clientEnv: ClientEnv = clientSchema.parse({
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
 
 export const isDevMode = process.env.NODE_ENV !== "production";

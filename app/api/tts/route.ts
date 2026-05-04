@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { synthesizeSpeechEdge } from "@/lib/ai/edge-tts";
+import { synthesizeSpeech as synthesizeOpenAITts } from "@/lib/ai/openai-tts";
 import { uploadTtsAudioAndCreateSignedUrl } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "text must be 1-1000 characters" }, { status: 400 });
     }
 
-    const mp3Buffer = await synthesizeSpeechEdge({
+    const mp3Buffer = await synthesizeOpenAITts({
       text,
-      rate: "-15%",
+      voice: "nova",
+      speed: 0.85,
+      timeoutMs: 8000,
     });
 
     const audioUrl = await uploadTtsAudioAndCreateSignedUrl({
@@ -32,11 +34,11 @@ export async function POST(request: Request) {
       storagePath: `tts/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.mp3`,
     });
 
-    return Response.json({ audio_url: audioUrl });
+    return Response.json({ audio_url: audioUrl, engine: "openai" });
   } catch (error) {
     console.error("POST /api/tts error:", error);
     return Response.json({ error: "TTS failed" }, { status: 502 });
   } finally {
-    console.log(`[tts] took ${Date.now() - startedAt}ms`);
+    console.log(`[tts] took ${Date.now() - startedAt}ms via openai`);
   }
 }

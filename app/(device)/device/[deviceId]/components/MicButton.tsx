@@ -158,7 +158,7 @@ export function MicButton({ isActive, isProcessing = false, onPress }: MicButton
           </button>
 
           <span
-            className="text-lg"
+            className="text-2xl"
             style={{
               color: isActive
                 ? "var(--radio-rec)"

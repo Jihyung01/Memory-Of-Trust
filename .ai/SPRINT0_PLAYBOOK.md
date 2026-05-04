@@ -553,9 +553,11 @@ Codex 작업이 필요하면 프롬프트를 짜주고, 실제 실행은 사용�
 
 | # | 항목 | 비용/규모 | 메모 |
 |---|---|---|---|
-| 1 | **TTS 안정화** — Edge TTS 5초 타임아웃 빈번 → browser TTS 폴백 → 손주 같은 작가 톤 깨짐 | OpenAI TTS-1 = 약 180원/월/가구. 비용 무시 가능 | 단계: (a) Edge 타임아웃 5→8초, (b) 그래도 불안정하면 OpenAI TTS-1 전환. Phase 4(50가구) 시점 XTTS-v2 자체 호스팅 |
-| 2 | **Elder UX Guardian 정식 검수** — `agent-prompts/08_elder_ux_guardian_claude.md` 기준 | - | MOT 헤더 브랜드, VuMeter speaking active, 폰트 크기 등 디자인 결정 일괄 |
-| 3 | **Sentry 통합** — STT/LLM/TTS API 실패 모니터링 | 무료 티어 충분 | T1 deferral 항목. 어르신 실사용 시작 시 이슈 모니터링 필수 |
+| 1 | ~~**TTS 안정화**~~ ✅ **2026-05-04 종결** — Step A(클라 5→15초, Edge 30→6초) → Step B(OpenAI 폴백 도입) → Step C(**OpenAI 단독 전환**). 진짜 원인은 클라이언트 5초 abort + Edge가 이 환경에서 5/5 timeout. | OpenAI TTS-1 nova, ~180~600원/월/가구 | warm 평균 11초→4초, browser TTS 폴백 0/5. `lib/ai/edge-tts.ts` 본체는 보존(dead code, 환경 바뀌면 한 줄 import로 부활). Phase 4(50가구) 시점 XTTS-v2 자체 호스팅 검토 |
+| 2 | ~~**Elder UX Guardian 정식 검수**~~ ✅ **2026-05-04 종결** Block A(헤더 제거 + VuMeter recording-only + MicButton text-2xl + caption 제거) + Block B(placeholder 텍스트 제거) 모두 적용. 5요소(시계/VuMeter/사진/문장/마이크)만 남음. | - | 디자인 결정 #10(헤더 brand: **remove**), #11(VuMeter active: **recording만**)도 가디언 권한으로 같이 닫힘 |
+| 3 | ~~**Sentry 통합**~~ ✅ **2026-05-04 종결** @sentry/nextjs 10.51 + 4 config 파일 + instrumentation.ts + next.config wrap. PII scrub: transcript/text/meta/response_text/device_token 모두 [REDACTED]. event.request.data + event.contexts.request.data + event.extra 3곳 처리 (Codex 1차 fix는 (1)만 처리해 Block 발생 → scrubPII 보강 후 5/5 통과). Session Replay 완전 비활성. dev 테스트 route(`app/api/dev/sentry-test/route.ts`)는 검증 후 삭제 권장 | 무료 티어 (Phase 1 1~3가구 충분) | 비치명 deferral: SDK 10.x 권장 패턴(disableLogger deprecated, onRequestError, global-error, instrumentation-client.ts) + npm audit moderate 3건 — 다음 SDK 업그레이드 사이클 |
+| 4 | ~~**`utterance_embeddings` 동기 hook 권한 거부 fix**~~ ✅ **2026-05-04 종결** 진단: `20260502000001_pgvector_rag.sql`에서 `GRANT SELECT, INSERT`만 했고 `UPDATE` 누락. supabase-js `.upsert()`가 ON CONFLICT DO UPDATE로 변환되어 첫 호출부터 거부. fix: 신규 마이그레이션 `20260504000001_utterance_embeddings_update_grant.sql` 한 줄(`GRANT UPDATE`) 추가. | - | 검증: `[utterance] embedding failed` 경고 사라짐 + utterance/STT/LLM/TTS 3회 전부 200 |
+| 5 | ~~**사진 signed URL 실패 — 버킷 이름 mismatch**~~ ✅ **2026-05-04 코드 fix 완료** `lib/supabase/server.ts:141` `createPhotoSignedUrl` 의 `.from("photos")` → `.from("family-photos")` 한 줄. 호출처는 `next-prompt` 1곳뿐. 동작 검증(자녀 업로드 → 어르신 디바이스 표시)은 다음 dev 시범 시 자연 확인 예정 | - | storage_path 형식은 양쪽 일치. seed 데이터의 `photos` 버킷 잔재는 dev에만 영향, Phase 1 신규 업로드부터 정상 |
 
 ### ✅ Q1/Q2 후속 (2026-05-02 완료)
 
@@ -573,12 +575,12 @@ Codex 작업이 필요하면 프롬프트를 짜주고, 실제 실행은 사용�
 | 8 | `/api/llm/respond`의 `${transcript}` escape 보강 | Phase 1 진입 직전 |
 | 9 | `utterance.meta.transcript` 신뢰 모델 — 클라이언트가 임의 transcript 보낼 수 있음 | Phase 1 디바이스 키오스크화와 묶어서 |
 
-### 🔵 디자인 결정 보류 (사용자 답 대기)
+### ✅ 디자인 결정 종결 (2026-05-04 가디언 권한)
 
-| # | 항목 |
-|---|---|
-| 10 | MOT 헤더 브랜드 노출: keep / remove / 더 작게 |
-| 11 | VuMeter `active` 조건: `recording`만 / 현재 그대로 (recording + speaking) |
+| # | 항목 | 결론 |
+|---|---|---|
+| 10 | ~~MOT 헤더 브랜드 노출~~ | **remove** — 헤더 컨테이너 전체 제거 (브랜드 + 상태 인디케이터 동시 해결). 어르신 본질 자가점검 위배 사유. |
+| 11 | ~~VuMeter `active` 조건~~ | **recording만** — speaking 중 active 시 어르신이 "내 목소리 들어가는 중" 오해. |
 
 ---
 

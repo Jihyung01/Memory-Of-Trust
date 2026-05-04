@@ -30,6 +30,7 @@ export interface EdgeTTSOptions {
   voice?: string;
   rate?: string;
   pitch?: string;
+  timeoutMs?: number;
 }
 
 /**
@@ -91,6 +92,7 @@ export async function synthesizeSpeechEdge(
   const requestId = randomUUID().replace(/-/g, "");
   const secMsGec = generateSecMsGec();
   const muid = generateMuid();
+  const timeoutMs = options.timeoutMs ?? 6000;
 
   const wsUrl = [
     `${WSS_BASE}?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}`,
@@ -107,9 +109,9 @@ export async function synthesizeSpeechEdge(
       if (!resolved) {
         resolved = true;
         ws.close();
-        reject(new Error("[edge-tts] Timeout after 30s"));
+        reject(new Error(`[edge-tts] Timeout after ${timeoutMs}ms`));
       }
-    }, 30_000);
+    }, timeoutMs);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let WebSocketClass: any;
